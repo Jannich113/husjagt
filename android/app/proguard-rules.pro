@@ -1,3 +1,1 @@
-# Keep listing models used by kotlinx.serialization
--keepattributes *Annotation*, InnerClasses
--dontwarn kotlinx.serialization.**
+# WebView / JS bridge keep rules (none used yet)

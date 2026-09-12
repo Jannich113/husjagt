@@ -1,3 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Husjagt</string>
+    <!-- Published Grok Build URL (*.grok.me). Change this after you hit Publish. -->
+    <string name="web_url">https://husjagt.grok.me</string>
+    <string name="error_title">Ingen forbindelse</string>
+    <string name="error_body">Husjagt kunne ikke hente boligerne. Tjek netværket, og prøv igen.</string>
+    <string name="retry">Prøv igen</string>
 </resources>

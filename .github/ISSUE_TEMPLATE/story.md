@@ -13,4 +13,4 @@ labels: story
 
 ## Area
 
-`android/app/src/main/java/dk/husjagt/`
+`android/` (WebView shell) or the Husjagt web app

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="husjagt_bg">#F1EDE4</color>
+    <color name="husjagt_fg">#161410</color>
+    <color name="husjagt_muted">#6B645A</color>
+    <color name="husjagt_primary">#2C4A3E</color>
+    <color name="husjagt_primary_fg">#F4F1EA</color>
+</resources>
