@@ -14,6 +14,7 @@ Default slice: Odense · villa / rækkehus / andelsbolig · max 2.000.000 kr.
 | S7 | Map of current results | Leaflet in the web app |
 | S8 | Persist saved houses | WebView `localStorage` |
 | A1 | Android shell | `MainActivity` WebView + Custom Tabs + offline retry |
+| S23 | Shareable hunt + listing links | Query-string hunt, native share sheet, grok.me deep links |
 
 ## Backlog
 
