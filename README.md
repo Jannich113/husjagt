@@ -22,6 +22,8 @@ Replace that with the URL you get after **Publish** in Grok Build (`*.grok.me`),
 
 Same-origin navigation (list → house → back) stays inside the app. Boligsiden/agency links open in Chrome Custom Tabs. Offline / failed loads show a retry screen.
 
+Tapping **Del** on a hunt or a house opens the Android share sheet (Messages, Mail, …). Shared `https://husjagt.grok.me/…` links open back in the app when it is installed.
+
 ## Open in Android Studio
 
 1. Clone this repo
