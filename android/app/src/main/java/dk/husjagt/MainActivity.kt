@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
             javaScriptCanOpenWindowsAutomatically = true
             userAgentString = "$userAgentString HusjagtApp/1.0"
         }
+        webView.addJavascriptInterface(ShareBridge(), "HusjagtNative")
         webView.webViewClient = HusjagtClient()
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -105,9 +107,19 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
+            val deep = intent.data
+            if (intent.action == Intent.ACTION_VIEW && deep != null && isAppUrl(deep)) {
+                webView.loadUrl(deep.toString())
+            }
         } else {
-            reload()
+            loadFromIntent(intent)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        loadFromIntent(intent)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -129,6 +141,21 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    private fun loadFromIntent(intent: Intent?) {
+        val deep = intent?.data
+        if (intent?.action == Intent.ACTION_VIEW && deep != null && isAppUrl(deep)) {
+            error.visibility = View.GONE
+            webView.visibility = View.VISIBLE
+            if (!isOnline()) {
+                showError()
+                return
+            }
+            webView.loadUrl(deep.toString())
+            return
+        }
+        reload()
     }
 
     private fun reload() {
@@ -188,6 +215,21 @@ class MainActivity : ComponentActivity() {
                 runCatching {
                     startActivity(Intent(Intent.ACTION_VIEW, uri))
                 }
+            }
+        }
+    }
+
+    private inner class ShareBridge {
+        @JavascriptInterface
+        fun share(title: String, text: String, url: String) {
+            runOnUiThread {
+                val body = if (text.isBlank()) url else "$text\n$url"
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, title)
+                    putExtra(Intent.EXTRA_TEXT, body)
+                }
+                startActivity(Intent.createChooser(send, title))
             }
         }
     }
