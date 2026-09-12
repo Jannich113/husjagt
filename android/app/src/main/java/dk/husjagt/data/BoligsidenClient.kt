@@ -29,7 +29,27 @@ class BoligsidenClient(
                 filters.priceMax?.let { addQueryParameter("priceMax", it.toString()) }
                 filters.priceMin?.let { addQueryParameter("priceMin", it.toString()) }
                 filters.roomsMin?.let { addQueryParameter("numberOfRoomsMin", it.toString()) }
+                filters.roomsMax?.let { addQueryParameter("numberOfRoomsMax", it.toString()) }
                 filters.areaMin?.let { addQueryParameter("areaMin", it.toString()) }
+                filters.areaMax?.let { addQueryParameter("areaMax", it.toString()) }
+                filters.lotMin?.let { addQueryParameter("lotAreaMin", it.toString()) }
+                filters.lotMax?.let { addQueryParameter("lotAreaMax", it.toString()) }
+                filters.yearFrom?.let { addQueryParameter("yearBuiltFrom", it.toString()) }
+                filters.yearTo?.let { addQueryParameter("yearBuiltTo", it.toString()) }
+                if (filters.energyLabels.isNotEmpty()) {
+                    addQueryParameter("energyLabels", filters.energyLabels.joinToString(",") { it.uppercase() })
+                }
+                filters.expenseMax?.let { addQueryParameter("monthlyExpenseMax", it.toString()) }
+                filters.daysMax?.let { addQueryParameter("daysListedMax", it.toString()) }
+                filters.zipCode
+                    ?.filter { it.isDigit() }
+                    ?.takeIf { it.length == 4 }
+                    ?.let { addQueryParameter("zipCodes", it) }
+                filters.city?.trim()?.takeIf { it.isNotEmpty() }?.let { addQueryParameter("cities", it) }
+                if (filters.basement) addQueryParameter("basementAreaMin", "1")
+                if (filters.balcony) addQueryParameter("balcony", "true")
+                if (filters.terrace) addQueryParameter("terrace", "true")
+                if (filters.elevator) addQueryParameter("elevator", "true")
             }
             .build()
 
@@ -51,21 +71,37 @@ class BoligsidenClient(
                 error("Boligsiden ${response.code}: ${body.take(180)}")
             }
             val parsed = json.decodeFromString<BoligsidenSearchResponse>(body)
-            val listings = parsed.cases.mapNotNull { it.toListing() }
-                .filter { listing ->
-                    val minLon = filters.minLon
-                    val minLat = filters.minLat
-                    val maxLon = filters.maxLon
-                    val maxLat = filters.maxLat
-                    if (minLon == null || minLat == null || maxLon == null || maxLat == null) true
-                    else {
-                        val lat = listing.lat ?: return@filter false
-                        val lon = listing.lon ?: return@filter false
-                        lon in minLon..maxLon && lat in minLat..maxLat
-                    }
-                }
-            return SearchResult(totalHits = parsed.totalHits, listings = listings)
+            val listings = parsed.cases.mapNotNull { it.toListing() }.filter { it.matches(filters) }
+            val clientOnly = filters.priceDropOnly || filters.m2PriceMax != null ||
+                (filters.minLon != null && filters.minLat != null && filters.maxLon != null && filters.maxLat != null)
+            return SearchResult(
+                totalHits = if (clientOnly) listings.size else parsed.totalHits,
+                listings = listings,
+            )
         }
+    }
+
+    private fun Listing.matches(filters: SearchFilters): Boolean {
+        val minLon = filters.minLon
+        val minLat = filters.minLat
+        val maxLon = filters.maxLon
+        val maxLat = filters.maxLat
+        if (minLon != null && minLat != null && maxLon != null && maxLat != null) {
+            val lat = lat ?: return false
+            val lon = lon ?: return false
+            if (lon !in minLon..maxLon || lat !in minLat..maxLat) return false
+        }
+        if (filters.priceDropOnly && (priceChange == null || priceChange >= -0.5)) return false
+        if (filters.m2PriceMax != null && (m2price == null || m2price > filters.m2PriceMax)) return false
+        if (filters.energyLabels.isNotEmpty()) {
+            val band = energy?.trim()?.uppercase()?.firstOrNull()?.toString()
+            if (band == null || band !in filters.energyLabels.map { it.uppercase() }) return false
+        }
+        val zip = filters.zipCode?.filter { it.isDigit() }
+        if (zip != null && zip.length == 4 && this.zip != zip) return false
+        val city = filters.city?.trim()?.lowercase()
+        if (!city.isNullOrEmpty() && !this.city.lowercase().contains(city)) return false
+        return true
     }
 
     private fun BoligsidenCase.toListing(): Listing? {

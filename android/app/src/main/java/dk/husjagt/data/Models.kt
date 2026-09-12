@@ -8,7 +8,24 @@ data class SearchFilters(
     val priceMax: Int? = 2_000_000,
     val priceMin: Int? = null,
     val roomsMin: Int? = null,
+    val roomsMax: Int? = null,
     val areaMin: Int? = null,
+    val areaMax: Int? = null,
+    val lotMin: Int? = null,
+    val lotMax: Int? = null,
+    val yearFrom: Int? = null,
+    val yearTo: Int? = null,
+    val energyLabels: List<String> = emptyList(),
+    val expenseMax: Int? = null,
+    val m2PriceMax: Int? = null,
+    val daysMax: Int? = null,
+    val zipCode: String? = null,
+    val city: String? = null,
+    val basement: Boolean = false,
+    val balcony: Boolean = false,
+    val terrace: Boolean = false,
+    val elevator: Boolean = false,
+    val priceDropOnly: Boolean = false,
     val sortBy: String = "price",
     val sortAscending: Boolean = true,
     val page: Int = 1,
@@ -17,7 +34,32 @@ data class SearchFilters(
     val minLat: Double? = null,
     val maxLon: Double? = null,
     val maxLat: Double? = null,
-)
+) {
+    val advancedCount: Int
+        get() {
+            var n = 0
+            if (priceMin != null) n++
+            if (roomsMax != null) n++
+            if (areaMax != null) n++
+            if (lotMin != null) n++
+            if (lotMax != null) n++
+            if (yearFrom != null) n++
+            if (yearTo != null) n++
+            if (energyLabels.isNotEmpty()) n++
+            if (expenseMax != null) n++
+            if (m2PriceMax != null) n++
+            if (daysMax != null) n++
+            if (!zipCode.isNullOrBlank()) n++
+            if (!city.isNullOrBlank()) n++
+            if (basement) n++
+            if (balcony) n++
+            if (terrace) n++
+            if (elevator) n++
+            if (priceDropOnly) n++
+            if (sortBy != "price" || !sortAscending) n++
+            return n
+        }
+}
 
 data class Listing(
     val id: String,
@@ -67,6 +109,22 @@ object PropertyTypes {
         "holiday house" to "Fritidshus",
         "farm" to "Landejendom",
         "hobby farm" to "Hobbyejendom",
+    )
+}
+
+object EnergyLabels {
+    val all = listOf("A", "B", "C", "D", "E", "F", "G")
+}
+
+object SortOptions {
+    val all = listOf(
+        Triple("price", true, "Pris, lav → høj"),
+        Triple("price", false, "Pris, høj → lav"),
+        Triple("daysListed", true, "Nyeste først"),
+        Triple("timeOnMarket", true, "Kortest liggetid"),
+        Triple("perAreaPrice", true, "Lavest m²-pris"),
+        Triple("monthlyExpense", true, "Lavest ejerudgift"),
+        Triple("lotArea", false, "Størst grund"),
     )
 }
 

@@ -14,6 +14,8 @@ Default slice: Odense · villa / rækkehus / andelsbolig · max 2.000.000 kr.
 | S4 | Listing cards | Price, address, m², rooms, energy, agency, liggetid |
 | S5 | Listing detail | Photo, facts, open original Boligsiden URL |
 | S6 | Save / unsave houses | In-memory favorites on the session |
+| S12 | Sort control | Price, liggetid, m²-pris, ejerudgift, grund |
+| S13 | Energy-label filter | A–G chips; A2010/A2015 count as A |
 
 ## Backlog
 
@@ -31,8 +33,6 @@ Default slice: Odense · villa / rækkehus / andelsbolig · max 2.000.000 kr.
 | ID | Story | Acceptance |
 | --- | --- | --- |
 | S11 | Photo gallery on detail | Swipe all case images, not only the cover. |
-| S12 | Sort control | Price, liggetid, size — exposed in the filter sheet. |
-| S13 | Energy-label filter | A–G chips; hide listings below the chosen label. |
 | S14 | Draw map bounds | Pinch/drag a box instead of the hardcoded Odense snippet. |
 | S15 | Hide / dismiss a listing | Hidden ids stay out of list + map until reset. |
 
@@ -47,9 +47,3 @@ Default slice: Odense · villa / rækkehus / andelsbolig · max 2.000.000 kr.
 | S20 | Realkredit sketch | Rough monthly payment from cash price (not advice). |
 | S21 | Share listing | Android share sheet with address + Boligsiden URL. |
 | S22 | Search by street / address | Free-text against the current kommune result set. |
-
-## Out of scope for v1
-
-- Scraping each agency site separately (Boligsiden already aggregates them).
-- Accounts / cloud sync.
-- iOS.
