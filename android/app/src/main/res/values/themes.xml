@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Husjagt" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#F1EDE4</item>
+        <item name="android:navigationBarColor">#F1EDE4</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
