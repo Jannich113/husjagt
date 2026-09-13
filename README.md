@@ -1,61 +1,42 @@
 # Husjagt
 
-Android wrapper around the **Husjagt** web app. One `WebView` loads the live site — list, map, filters, saved houses — instead of a separate native UI.
+Danish house hunt. Web app plus a thin Android WebView wrapper.
 
-Default search matches this [Boligsiden query](https://www.boligsiden.dk/kommune/odense/tilsalg/villa,raekkehus,andelsbolig/kort?mapBounds=10.342263,55.333931,10.348721,55.34033&priceMax=2000000):
+Default search: **Odense** · villa / rækkehus / andelsbolig · max **2.000.000 kr**.
 
-- Kommune: **Odense**
-- Types: **villa, rækkehus, andelsbolig**
-- Max price: **2.000.000 kr**
+Listings are aggregated from [Boligsiden](https://www.boligsiden.dk), Boliga, GulogGratis, DBA, plus a Lyt tab for Instagram / TikTok reels of private ads.
 
-Listings come from [Boligsiden](https://www.boligsiden.dk), which already aggregates home, Nybolig, EDC, danbolig, Estate, LokalBolig, Realmæglerne and independents.
+## Web app
 
-## Point the app at the web version
+TanStack Start (Vite) PWA. From the repo root:
 
-The WebView loads `web_url` in [`android/app/src/main/res/values/strings.xml`](android/app/src/main/res/values/strings.xml):
+```bash
+npm install
+npm run dev
+```
+
+Opens on `http://localhost:8080`. Production:
+
+```bash
+npm run build
+```
+
+Point the published host at `husjagt.grok.me` (or any other origin) after **Publish** in Grok Build.
+
+## Android wrapper
+
+One `WebView` loads the live site. Same-origin navigation stays in-app; agency links open in Chrome Custom Tabs. **Del** uses the Android share sheet.
+
+Set `web_url` in [`android/app/src/main/res/values/strings.xml`](android/app/src/main/res/values/strings.xml), then open `android/` in Android Studio (API 26+):
 
 ```xml
 <string name="web_url">https://husjagt.grok.me</string>
 ```
 
-Replace that with the URL you get after **Publish** in Grok Build (`*.grok.me`), or any other host you deploy the web app to.
-
-Same-origin navigation (list → house → back) stays inside the app. Boligsiden/agency links open in Chrome Custom Tabs. Offline / failed loads show a retry screen.
-
-Tapping **Del** on a hunt or a house opens the Android share sheet (Messages, Mail, …). Shared `https://husjagt.grok.me/…` links open back in the app when it is installed.
-
-## Open in Android Studio
-
-1. Clone this repo
-2. Set `web_url` as above
-3. Open the `android/` folder in Android Studio (Ladybug / Koala or newer)
-4. Run on a device or emulator (API 26+)
-
-```
-android/
-  app/src/main/java/dk/husjagt/
-    MainActivity.kt   WebView, back stack, Custom Tabs
-    HusjagtApp.kt
-```
-
-Command line:
-
 ```bash
 cd android
 ./gradlew :app:assembleDebug
 ```
-
-## What the web app does
-
-| Filter | Notes |
-| --- | --- |
-| Kommune | All 98 Danish municipalities |
-| Boligtype | Villa, rækkehus, andelsbolig, ejerlejlighed, … |
-| Price | Min / max in DKK |
-| Rooms / m² / lot / year | Range filters |
-| Energy | A–G |
-| Map | Pins for the current result set |
-| Saved | Hearts, stored in the WebView’s localStorage |
 
 ## License
 

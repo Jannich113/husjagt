@@ -1,26 +1,29 @@
 # Husjagt roadmap
 
-The Android app is a WebView over the Husjagt web app. Product work lives in the web UI; this repo is the Play-store shell.
+The product right now is the **Android WebView**. The web hunt is on hold — it already loads inside the viewer.
 
 Default slice: Odense · villa / rækkehus / andelsbolig · max 2.000.000 kr.
 
-## Done
+## Now
+
+| ID | Story | Notes |
+| --- | --- | --- |
+| A1 | Android WebView shell | Full-screen `WebView` of the live site, Custom Tabs for agencies, offline retry, native Del |
+| A2 | Start URL | `web_url` in `strings.xml` — set to the published `*.grok.me` after Publish |
+
+## Done (web, frozen)
 
 | ID | Story | Notes |
 | --- | --- | --- |
 | S1 | Live Boligsiden listings | Web app aggregates home, Nybolig, EDC, danbolig, Estate, … |
-| S2 | Default filters from the shared URL | Odense, three types, `priceMax=2000000` |
-| S3–S6 | List, filters, detail, saved | Rendered by the web app inside the WebView |
-| S7 | Map of current results | Leaflet in the web app |
-| S8 | Persist saved houses | WebView `localStorage` |
-| A1 | Android shell | `MainActivity` WebView + Custom Tabs + offline retry |
+| S2 | Default filters | Odense, three types, `priceMax=2000000` |
+| S3–S7 | List, filters, detail, map, saved | Rendered inside the WebView |
 | S23 | Shareable hunt + listing links | Query-string hunt, native share sheet, grok.me deep links |
 
 ## Backlog
 
 | ID | Story | Acceptance |
 | --- | --- | --- |
-| A2 | Configurable start URL | `web_url` in `strings.xml` — set to the published `*.grok.me` (or custom domain) after Publish |
 | A3 | Gradle CI | GitHub Action runs `./gradlew :app:assembleDebug` on push |
 | A4 | TWA / Play Digital Asset Links | Optional later, once the web origin is stable |
-| S16 | Saved search alerts | Re-run the current filter; notify when a new case appears |
+| S16 | Saved search alerts | On hold with the rest of the web app |

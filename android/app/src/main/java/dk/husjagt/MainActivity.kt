@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -58,6 +59,9 @@ class MainActivity : ComponentActivity() {
             mediaPlaybackRequiresUserGesture = false
             setSupportMultipleWindows(true)
             javaScriptCanOpenWindowsAutomatically = true
+            allowFileAccess = false
+            allowContentAccess = false
+            safeBrowsingEnabled = true
             userAgentString = "$userAgentString HusjagtApp/1.0"
         }
         webView.addJavascriptInterface(ShareBridge(), "HusjagtNative")
@@ -256,6 +260,11 @@ class MainActivity : ComponentActivity() {
             error: WebResourceError,
         ) {
             if (request.isForMainFrame) showError()
+        }
+
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            reload()
+            return true
         }
     }
 }
