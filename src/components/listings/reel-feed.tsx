@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatKr } from "@/lib/listings/format";
 import {
   isPlayableVideo,
+  openedSocialUrl,
   platformLabel,
   videoEmbedUrl,
   type SocialListing,
@@ -226,7 +227,7 @@ function ReelSlide({ listing }: { listing: SocialListing }) {
         {place ? <p className="mt-1 text-sm text-primary-fg/75">{place}</p> : null}
         {listing.author ? <p className="mt-1 text-xs text-primary-fg/60">@{listing.author}</p> : null}
         <a
-          href={listing.url}
+          href={openedSocialUrl(listing)}
           target="_blank"
           rel="noreferrer"
           className="pointer-events-auto mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-primary-fg px-4 pr-3.5 text-sm font-medium text-fg"

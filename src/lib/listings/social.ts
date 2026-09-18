@@ -122,10 +122,32 @@ export function filterSocialListings(listings: SocialListing[], filters: SearchF
   return listings.filter((item) => socialMatchesFilters(item, filters));
 }
 
+const IG_POST_CODE_RE = /instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i;
+
+/** Shortcode from a scraped Instagram post/reel URL, or null for profile/explore/other. */
+export function instagramPostCode(url: string): string | null {
+  return url.match(IG_POST_CODE_RE)?.[1] ?? null;
+}
+
+/**
+ * URL opened when tapping "Åbn på …" for a social listing.
+ * Instagram `/reel/{code}/` deep-links often land on the Reels feed (neighbouring
+ * clip); map to the post permalink `/p/{code}/` derived from the stored scrape URL.
+ * TikTok and other platforms keep their stored URL unchanged.
+ */
+export function openedSocialUrl(item: SocialListing): string {
+  if (item.platform === "instagram") {
+    const code = instagramPostCode(item.url);
+    if (code) return `https://www.instagram.com/p/${code}/`;
+  }
+  return item.url;
+}
+
 export function videoEmbedUrl(item: SocialListing): string | null {
   if (item.platform === "instagram") {
-    const code = item.url.match(/instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i)?.[1];
-    return code ? `https://www.instagram.com/reel/${code}/embed` : null;
+    const code = instagramPostCode(item.url);
+    // Prefer /p/ embed so the iframe matches the opened deep-link shortcode.
+    return code ? `https://www.instagram.com/p/${code}/embed` : null;
   }
   if (item.platform === "tiktok") {
     const id = item.url.match(/\/video\/(\d+)/)?.[1];
