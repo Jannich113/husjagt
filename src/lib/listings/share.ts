@@ -399,28 +399,30 @@ declare global {
   }
 }
 
+/**
+ * Chrome PWA path: Web Share API, then clipboard.
+ * `window.HusjagtNative` is a leftover APK bridge — never required, only used when Web Share is missing.
+ */
 export async function shareLink(payload: {
   title: string;
   text: string;
   url: string;
 }): Promise<ShareResult> {
   const url = absoluteUrl(payload.url);
-  try {
-    if (typeof window !== "undefined" && typeof window.HusjagtNative?.share === "function") {
-      window.HusjagtNative.share(payload.title, payload.text, url);
+  const data = { title: payload.title, text: payload.text, url };
+
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    try {
+      await navigator.share(data);
       return "shared";
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return "failed";
     }
-    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-      await navigator.share({
-        title: payload.title,
-        text: payload.text,
-        url,
-      });
-      return "shared";
-    }
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") return "failed";
+  } else if (typeof window !== "undefined" && typeof window.HusjagtNative?.share === "function") {
+    window.HusjagtNative.share(payload.title, payload.text, url);
+    return "shared";
   }
+
   const copied = await copyText(url);
   return copied ? "copied" : "failed";
 }

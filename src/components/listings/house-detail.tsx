@@ -15,6 +15,7 @@ import {
   typeLabel,
 } from "@/lib/listings/format";
 import { listingShareCopy } from "@/lib/listings/share";
+import { externalLinkProps } from "@/lib/pwa/outbound";
 import type { Listing, ListingDetail } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 
@@ -149,7 +150,7 @@ export function HouseDetail({
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Button asChild className="flex-1">
-            <a href={href} target="_blank" rel="noreferrer">
+            <a {...externalLinkProps(href)}>
               Se original opslag
               <ExternalLink className="size-4" />
             </a>

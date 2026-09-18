@@ -1,7 +1,7 @@
 import { Monitor, Smartphone, Tablet } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { deviceFromSize, sizeClassFromWidth, type DeviceFrame } from "@/lib/listings/layout";
-import { isNativeWebView, isStandaloneDisplay, STANDALONE_MEDIA } from "@/lib/pwa/display-mode";
+import { isInstalledApp, STANDALONE_MEDIA } from "@/lib/pwa/display-mode";
 import { cn } from "@/lib/utils";
 
 const FRAME_KEY = "husjagt:frame";
@@ -11,11 +11,6 @@ const FRAMES: { id: DeviceFrame; label: string; icon: typeof Smartphone }[] = [
   { id: "tablet", label: "Tablet", icon: Tablet },
   { id: "laptop", label: "Computer", icon: Monitor },
 ];
-
-function isNativeWebViewUa(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return isNativeWebView(navigator.userAgent);
-}
 
 function readFrame(): DeviceFrame | null {
   if (typeof window === "undefined") return null;
@@ -34,7 +29,7 @@ export function WebViewShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function hideStudio() {
-      if (isNativeWebViewUa() || isStandaloneDisplay(window)) {
+      if (isInstalledApp(window)) {
         setShell(false);
         return;
       }

@@ -2,6 +2,7 @@ import { ExternalLink, MapPin, Play } from "lucide-react";
 import { useState } from "react";
 import { formatKr } from "@/lib/listings/format";
 import { isVideoPost, openedSocialUrl, platformLabel, type SocialListing } from "@/lib/listings/social";
+import { externalLinkProps } from "@/lib/pwa/outbound";
 
 export function SocialCard({ listing }: { listing: SocialListing }) {
   const [broken, setBroken] = useState(false);
@@ -10,7 +11,7 @@ export function SocialCard({ listing }: { listing: SocialListing }) {
 
   return (
     <article className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-      <a href={openedSocialUrl(listing)} target="_blank" rel="noreferrer" className="block">
+      <a {...externalLinkProps(openedSocialUrl(listing))} className="block">
         <div className="relative h-44 bg-sunken sm:h-48">
           {listing.video ? (
             <video
@@ -63,9 +64,7 @@ export function SocialCard({ listing }: { listing: SocialListing }) {
           <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted">{listing.text}</p>
         ) : null}
         <a
-          href={openedSocialUrl(listing)}
-          target="_blank"
-          rel="noreferrer"
+          {...externalLinkProps(openedSocialUrl(listing))}
           className="mt-4 inline-flex h-11 items-center gap-2 rounded-full border border-border bg-bg px-4 text-sm font-medium"
         >
           {video ? `Åbn på ${platformLabel(listing.platform)}` : "Åbn opslag"}

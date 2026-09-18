@@ -18,8 +18,17 @@ export function isIosSafari(ua: string): boolean {
   return ios && !/crios|fxios|edgios/.test(value);
 }
 
+/** Legacy Android WebView wrapper (`HusjagtApp/1.0`). Not required for hunt, share, or outbound links. */
 export function isNativeWebView(ua: string): boolean {
   return /HusjagtApp\//i.test(ua);
+}
+
+/** Installed Chrome PWA (display-mode) or the leftover APK wrapper. Standalone wins over UA. */
+export function isInstalledApp(
+  win: Window | undefined = typeof window === "undefined" ? undefined : window,
+  ua: string = typeof navigator === "undefined" ? "" : navigator.userAgent,
+): boolean {
+  return isStandaloneDisplay(win) || isNativeWebView(ua);
 }
 
 export function isEmbeddedFrame(win: Window | undefined = typeof window === "undefined" ? undefined : window): boolean {
@@ -30,4 +39,3 @@ export function isEmbeddedFrame(win: Window | undefined = typeof window === "und
     return true;
   }
 }
-

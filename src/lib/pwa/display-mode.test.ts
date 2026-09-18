@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isEmbeddedFrame, isIosSafari, isNativeWebView, isStandaloneDisplay } from "./display-mode.ts";
+import { isEmbeddedFrame, isInstalledApp, isIosSafari, isNativeWebView, isStandaloneDisplay } from "./display-mode.ts";
 
 describe("isStandaloneDisplay", () => {
   it("reads display-mode media and iOS navigator.standalone", () => {
@@ -47,6 +47,23 @@ describe("isNativeWebView", () => {
   it("matches the Android wrapper UA", () => {
     assert.equal(isNativeWebView("Mozilla/5.0 HusjagtApp/1.0"), true);
     assert.equal(isNativeWebView("Mozilla/5.0 Chrome/120"), false);
+  });
+});
+
+describe("isInstalledApp", () => {
+  it("treats display-mode standalone as first-class, UA only as leftover APK", () => {
+    const standalone = {
+      matchMedia: () => ({ matches: true }),
+      navigator: {},
+    } as unknown as Window;
+    const browser = {
+      matchMedia: () => ({ matches: false }),
+      navigator: {},
+    } as unknown as Window;
+    assert.equal(isInstalledApp(standalone, "Mozilla/5.0 Chrome/120"), true);
+    assert.equal(isInstalledApp(browser, "Mozilla/5.0 HusjagtApp/1.0"), true);
+    assert.equal(isInstalledApp(browser, "Mozilla/5.0 Chrome/120"), false);
+    assert.equal(isInstalledApp(undefined, "Mozilla/5.0 Chrome/120"), false);
   });
 });
 
