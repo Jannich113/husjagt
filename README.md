@@ -21,7 +21,7 @@ npm run build
 
 Canonical origin after publish: `https://husjagt.grok.me` (or any other HTTPS host). In Chrome (desktop or Android), use **Tilføj til hjemmeskærm** / Install. **Del** uses the system share sheet, with a clipboard fallback.
 
-See [docs/ROADMAP.md](docs/ROADMAP.md). Product epic: [#35](https://github.com/Jannich113/husjagt/issues/35).
+See [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/web-push.md](docs/web-push.md). Product epic: [#35](https://github.com/Jannich113/husjagt/issues/35).
 
 ## Leftover: Android WebView
 

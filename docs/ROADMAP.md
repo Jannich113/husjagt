@@ -11,8 +11,6 @@ Product epic: [#35](https://github.com/Jannich113/husjagt/issues/35). The old An
 | ID | Story | Notes |
 | --- | --- | --- |
 | PWA | Chrome PWA is the product | Installable standalone, SW shell, Danish manifest, Del without APK |
-| PWA-5 | Docs match that | This file + root README + `android/` leftover note |
-| PWA-6 | Web Push spike | Optional later — [#41](https://github.com/Jannich113/husjagt/issues/41); informs S16 |
 
 ## Done
 
@@ -27,6 +25,8 @@ Product epic: [#35](https://github.com/Jannich113/husjagt/issues/35). The old An
 | PWA-2 | Manifest icons + DA metadata | 192 / 512 / maskable, `lang: da` |
 | PWA-3 | Install prompt + standalone | Tilføj til hjemmeskærm; hide studio in standalone |
 | PWA-4 | Share + outbound without APK | `navigator.share`; `noopener noreferrer` |
+| PWA-5 | Docs match the product | README + this file + leftover `android/` note |
+| PWA-6 | Web Push spike | [docs/web-push.md](web-push.md) — **no Push in v1**; local badge first |
 
 ## Leftover Android (optional)
 
@@ -43,5 +43,5 @@ Do **not** require the APK. Wrapper lives under `android/` — see [`android/REA
 
 | ID | Story | Notes |
 | --- | --- | --- |
-| S16 | Saved search alerts | Local filters; Web Push is a spike first (PWA-6) |
+| S16 | Saved search alerts | Local badge on reopen (#17). Web Push is v2 only — see [web-push.md](web-push.md) |
 | S22+ | Street search, zones, keywords, … | Open issues on the board |
