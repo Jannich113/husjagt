@@ -99,6 +99,7 @@ export function extraFilterLabels(filters: SearchFilters): string[] {
   if (filters.expenseMax != null) labels.push(`ejerudgift maks. ${num.format(filters.expenseMax)} kr`);
   if (filters.m2PriceMax != null) labels.push(`maks. ${num.format(filters.m2PriceMax)} kr/m²`);
   if (filters.daysMax != null) labels.push(`maks. ${filters.daysMax} dage`);
+  if (filters.freshOnly) labels.push("kun nye");
   if (filters.zipCode) labels.push(filters.zipCode);
   if (filters.city) labels.push(filters.city);
   if (filters.basement) labels.push("kælder");

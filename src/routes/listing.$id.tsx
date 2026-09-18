@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { HouseDetail } from "@/components/listings/house-detail";
+import { useFirstSeen } from "@/lib/listings/fresh";
 import { getListing } from "@/lib/listings/search";
+import { useSeen } from "@/lib/listings/seen";
 import { listingShareCopy, recalledHunt } from "@/lib/listings/share";
 
 export const Route = createFileRoute("/listing/$id")({
@@ -23,6 +26,17 @@ export const Route = createFileRoute("/listing/$id")({
 function ListingPage() {
   const listing = Route.useLoaderData();
   const navigate = useNavigate();
+  const hydrateSeen = useSeen((s) => s.hydrate);
+  const markSeen = useSeen((s) => s.mark);
+  const hydrateFirstSeen = useFirstSeen((s) => s.hydrate);
+  const rememberFirstSeen = useFirstSeen((s) => s.remember);
+
+  useEffect(() => {
+    hydrateSeen();
+    hydrateFirstSeen();
+    if (listing?.id) markSeen(listing.id);
+    if (listing?.id && listing.days == null) rememberFirstSeen([listing.id]);
+  }, [hydrateSeen, hydrateFirstSeen, rememberFirstSeen, markSeen, listing?.id, listing?.days]);
 
   function goBack() {
     void navigate({ to: "/", search: recalledHunt() });

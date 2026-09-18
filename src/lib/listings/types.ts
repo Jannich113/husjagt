@@ -64,6 +64,7 @@ export type SearchFilters = {
   terrace: boolean;
   elevator: boolean;
   priceDropOnly: boolean;
+  freshOnly: boolean;
   sortBy: SortKey;
   sortAscending: boolean;
   page: number;
@@ -96,6 +97,7 @@ export const DEFAULT_FILTERS: SearchFilters = {
   terrace: false,
   elevator: false,
   priceDropOnly: false,
+  freshOnly: false,
   sortBy: "price",
   sortAscending: true,
   page: 1,
@@ -118,7 +120,7 @@ export function energyBand(label: string | null | undefined): EnergyLabel | null
 }
 
 export function usesClientOnlyFilters(filters: SearchFilters): boolean {
-  return Boolean(filters.priceDropOnly || filters.bounds || filters.m2PriceMax != null);
+  return Boolean(filters.priceDropOnly || filters.freshOnly || filters.bounds || filters.m2PriceMax != null);
 }
 
 export function advancedFilterCount(filters: SearchFilters): number {
@@ -141,6 +143,7 @@ export function advancedFilterCount(filters: SearchFilters): number {
   if (filters.terrace) n += 1;
   if (filters.elevator) n += 1;
   if (filters.priceDropOnly) n += 1;
+  if (filters.freshOnly) n += 1;
   if (filters.sortBy !== "price" || !filters.sortAscending) n += 1;
   return n;
 }

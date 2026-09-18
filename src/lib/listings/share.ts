@@ -34,6 +34,7 @@ export type HuntSearch = {
   terrasse?: number;
   elevator?: number;
   fald?: number;
+  ny?: number;
   sort?: string;
   desc?: number;
   kort?: string;
@@ -140,6 +141,7 @@ export function parseHuntSearch(raw: Record<string, unknown> | null | undefined)
   if (asFlag(raw.terrasse) || asFlag(raw.terrace)) out.terrasse = 1;
   if (asFlag(raw.elevator)) out.elevator = 1;
   if (asFlag(raw.fald) || asFlag(raw.priceDropOnly)) out.fald = 1;
+  if (asFlag(raw.ny) || asFlag(raw.freshOnly)) out.ny = 1;
   const sort = asString(raw.sort);
   if (sort && SORT_KEYS.has(sort)) out.sort = sort;
   if (asFlag(raw.desc) || raw.asc === 0 || raw.asc === "0" || raw.asc === false) {
@@ -180,6 +182,7 @@ export function filtersFromHunt(hunt: HuntSearch | null | undefined): SearchFilt
     terrace: src.terrasse === 1,
     elevator: src.elevator === 1,
     priceDropOnly: src.fald === 1,
+    freshOnly: src.ny === 1,
     sortBy: src.sort && SORT_KEYS.has(src.sort) ? (src.sort as SearchFilters["sortBy"]) : "price",
     sortAscending: src.desc !== 1,
     bounds: parseBounds(src.kort),
@@ -227,6 +230,7 @@ export function huntFromFilters(
   if (filters.terrace) out.terrasse = 1;
   if (filters.elevator) out.elevator = 1;
   if (filters.priceDropOnly) out.fald = 1;
+  if (filters.freshOnly) out.ny = 1;
   if (filters.sortBy !== "price") out.sort = filters.sortBy;
   if (!filters.sortAscending) out.desc = 1;
   if (filters.bounds) out.kort = encodeBounds(filters.bounds);

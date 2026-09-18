@@ -22,7 +22,7 @@ const YEAR_TO = [1980, 2000, 2010, 2020];
 const LOT_STEPS = [400, 600, 800, 1000];
 const LOT_MAX_STEPS = [400, 600, 800, 1200];
 const EXPENSE_STEPS = [2_000, 3_000, 4_000, 5_000];
-const DAYS_STEPS = [14, 30, 60, 90];
+const DAYS_STEPS = [7, 14, 30, 60, 90];
 const M2_PRICE_STEPS = [10_000, 15_000, 20_000, 25_000];
 
 type Props = {
@@ -216,6 +216,19 @@ export function FilterSheet({ value, onChange, count }: Props) {
               <p className="mt-1.5 text-xs text-faint">
                 Linket pegede på ca. 400 × 700 m. Hele kommunen er valgt som standard, så du ikke lander på et tomt kort.
               </p>
+            </section>
+
+            <section>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Nye boliger</p>
+              <div className="flex flex-wrap gap-2">
+                <Chip active={!draft.freshOnly} onClick={() => setDraft((d) => ({ ...d, freshOnly: false }))}>
+                  Alle
+                </Chip>
+                <Chip active={draft.freshOnly} onClick={() => setDraft((d) => ({ ...d, freshOnly: true }))}>
+                  Kun nye
+                </Chip>
+              </div>
+              <p className="mt-1.5 text-xs text-faint">Ny i dag og inden for 7 dage på markedet — ikke det samme som uåbnede.</p>
             </section>
 
             <section className="rounded-xl border border-border bg-surface">

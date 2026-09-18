@@ -76,6 +76,7 @@ function buildSearchUrl(filters: SearchFilters): string {
   }
   if (filters.expenseMax != null) url.searchParams.set("monthlyExpenseMax", String(filters.expenseMax));
   if (filters.daysMax != null) url.searchParams.set("daysListedMax", String(filters.daysMax));
+  else if (filters.freshOnly) url.searchParams.set("daysListedMax", "7");
   const zip = zipDigits(filters.zipCode);
   if (zip) url.searchParams.set("zipCodes", zip);
   const city = filters.city?.trim();
@@ -135,7 +136,11 @@ export function applyLocalFilters(listings: Listing[], filters: SearchFilters): 
     if (filters.m2PriceMax != null && (item.m2price == null || item.m2price > filters.m2PriceMax)) {
       return false;
     }
-    if (filters.daysMax != null && (item.days == null || item.days > filters.daysMax)) return false;
+    if (filters.freshOnly) {
+      if (item.days != null && item.days > 7) return false;
+    } else if (filters.daysMax != null && (item.days == null || item.days > filters.daysMax)) {
+      return false;
+    }
     if (energyWanted.size) {
       const band = energyBand(item.energy);
       if (!band || !energyWanted.has(band)) return false;

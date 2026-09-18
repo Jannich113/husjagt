@@ -59,6 +59,13 @@ describe("hunt URL codec", () => {
     assert.equal(hunt.t, "lejlighed,andel");
   });
 
+  it("roundtrips kun-nye", () => {
+    const hunt = huntFromFilters({ ...DEFAULT_FILTERS, freshOnly: true }, "list");
+    assert.equal(hunt.ny, 1);
+    assert.equal(filtersFromHunt(hunt).freshOnly, true);
+    assert.equal(filtersFromHunt({}).freshOnly, false);
+  });
+
   it("accepts Danish type aliases and boolean flags from a raw URL", () => {
     const hunt = parseHuntSearch({
       k: "Odense",

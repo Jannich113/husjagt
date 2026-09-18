@@ -56,6 +56,9 @@ export function SocialCard({ listing }: { listing: SocialListing }) {
             </span>
           </p>
         ) : null}
+        {listing.author ? (
+          <p className="mt-1 text-sm text-muted">@{listing.author}</p>
+        ) : null}
         {listing.text ? (
           <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted">{listing.text}</p>
         ) : null}

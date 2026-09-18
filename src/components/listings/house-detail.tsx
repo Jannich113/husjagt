@@ -4,6 +4,7 @@ import { EnergyBadge } from "@/components/listings/energy-badge";
 import { ShareButton } from "@/components/listings/share-button";
 import { Button } from "@/components/ui/button";
 import { useFavorites } from "@/lib/listings/favorites";
+import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import {
   agencyChain,
   boligsidenUrl,
@@ -30,6 +31,9 @@ export function HouseDetail({
 }) {
   const saved = useFavorites((s) => s.ids.includes(listing.id));
   const toggle = useFavorites((s) => s.toggle);
+  const firstSeenAt = useFirstSeen((s) => s.seenAt[listing.id]);
+  const fresh = listingFreshness(listing, firstSeenAt);
+  const freshText = freshnessLabel(fresh);
   const [broken, setBroken] = useState(false);
   const share = useMemo(() => listingShareCopy(listing), [listing]);
   const href = listing.caseUrl || boligsidenUrl(listing.slugAddress || listing.slug);
@@ -41,7 +45,12 @@ export function HouseDetail({
     <main className={cn("mx-auto bg-bg pb-16", embedded ? "max-w-none" : "min-h-dvh max-w-3xl")}>
       <div className="sticky top-0 z-20 flex items-center justify-between bg-bg/95 px-3 py-2 backdrop-blur">
         {embedded ? (
-          <p className="px-2 text-sm text-muted">{typeLabel(listing.type)}</p>
+          <p className="flex items-center gap-2 px-2 text-sm text-muted">
+            <span>{typeLabel(listing.type)}</span>
+            {freshText ? (
+              <span className="rounded-full bg-warn px-2.5 py-0.5 text-xs font-medium text-primary-fg">{freshText}</span>
+            ) : null}
+          </p>
         ) : (
           <button
             type="button"
@@ -65,7 +74,7 @@ export function HouseDetail({
             onClick={() => toggle(listing)}
             className={cn(
               "flex size-11 items-center justify-center rounded-full border border-border",
-              saved ? "bg-primary text-primary-fg" : "bg-surface text-muted",
+              saved ? "bg-heart text-primary-fg" : "bg-surface text-muted",
             )}
             aria-label={saved ? "Fjern fra gemte" : "Gem bolig"}
           >
@@ -86,7 +95,14 @@ export function HouseDetail({
       )}
 
       <div className="px-5 pt-5">
-        {embedded ? null : <p className="text-sm text-muted">{typeLabel(listing.type)}</p>}
+        {embedded ? null : (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span>{typeLabel(listing.type)}</span>
+            {freshText ? (
+              <span className="rounded-full bg-warn px-2.5 py-0.5 text-xs font-medium text-primary-fg">{freshText}</span>
+            ) : null}
+          </p>
+        )}
         <h1 className={cn("font-display text-3xl tabular-nums", embedded ? "mt-0" : "mt-1")}>{formatKr(listing.price)}</h1>
         <p className="mt-2 flex items-center gap-1.5 text-base">
           <MapPin className="size-4 text-muted" />

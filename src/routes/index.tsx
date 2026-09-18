@@ -8,12 +8,15 @@ import { NavRail } from "@/components/listings/nav-rail";
 import { ReelFeed, VideoRail } from "@/components/listings/reel-feed";
 import { ShareButton } from "@/components/listings/share-button";
 import { SocialCard } from "@/components/listings/social-card";
+import { SocialWatchEditor } from "@/components/listings/social-watch";
 import { Button } from "@/components/ui/button";
 import { useFavorites } from "@/lib/listings/favorites";
+import { listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import { kommuneBySlug } from "@/lib/listings/kommuner";
 import { extraFilterLabels, formatKr, formatMio, typeLabel } from "@/lib/listings/format";
 import { useSizeClass } from "@/lib/listings/layout";
 import { listenSocial, searchHouses, searchHousesFast } from "@/lib/listings/search";
+import { loadOfflineSearch, saveOfflineSearch } from "@/lib/listings/offline-cache";
 import {
   filtersFromHunt,
   huntDocumentTitle,
@@ -26,7 +29,9 @@ import {
   type HuntSearch,
   type HuntView,
 } from "@/lib/listings/share";
+import { useSeen } from "@/lib/listings/seen";
 import { isPlayableVideo, isVideoPost, withLocalVideos, type SocialListenResult } from "@/lib/listings/social";
+import { useSocialWatch } from "@/lib/listings/social-watch";
 import type { Listing, SearchFilters, SearchResult } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +83,15 @@ function Home() {
   const savedIds = useFavorites((s) => s.ids);
   const savedMap = useFavorites((s) => s.items);
   const hydrate = useFavorites((s) => s.hydrate);
+  const hydrateSeen = useSeen((s) => s.hydrate);
+  const markSeen = useSeen((s) => s.mark);
+  const hydrateFirstSeen = useFirstSeen((s) => s.hydrate);
+  const rememberFirstSeen = useFirstSeen((s) => s.remember);
+  const firstSeenAt = useFirstSeen((s) => s.seenAt);
+  const hydrateWatch = useSocialWatch((s) => s.hydrate);
+  const watchReady = useSocialWatch((s) => s.ready);
+  const socialAccounts = useSocialWatch((s) => s.accounts);
+  const socialTags = useSocialWatch((s) => s.tags);
   const savedItems = useMemo(
     () => savedIds.map((id) => savedMap[id]).filter((row): row is Listing => Boolean(row)),
     [savedIds, savedMap],
@@ -88,9 +102,12 @@ function Home() {
 
   useEffect(() => {
     hydrate();
+    hydrateSeen();
+    hydrateFirstSeen();
+    hydrateWatch();
     document.body.style.removeProperty("pointer-events");
     document.body.style.removeProperty("overflow");
-  }, [hydrate]);
+  }, [hydrate, hydrateSeen, hydrateFirstSeen, hydrateWatch]);
 
   useEffect(() => {
     rememberHunt(hunt);
@@ -103,6 +120,12 @@ function Home() {
       .then((houses) => {
         if (!alive) return;
         setResult(houses);
+        saveOfflineSearch(filters, houses);
+      })
+      .catch(() => {
+        if (!alive) return;
+        const cached = loadOfflineSearch();
+        if (cached) setResult(cached.result);
       })
       .finally(() => {
         if (alive) setBusy(false);
@@ -113,9 +136,12 @@ function Home() {
   }, [filters]);
 
   useEffect(() => {
+    if (!watchReady) return;
     let alive = true;
     setSocialReady(false);
-    void listenSocial({ data: filters })
+    void listenSocial({
+      data: { ...filters, socialAccounts, socialTags },
+    })
       .then((posts) => {
         if (!alive) return;
         setSocial(posts);
@@ -128,7 +154,7 @@ function Home() {
     return () => {
       alive = false;
     };
-  }, [filters]);
+  }, [filters, watchReady, socialAccounts, socialTags]);
 
   function apply(next: SearchFilters) {
     void navigate({
@@ -147,10 +173,15 @@ function Home() {
   }
 
   function openHouse(listing: Listing) {
+    markSeen(listing.id);
     setOpenListing(listing);
   }
 
-  const listings = view === "saved" ? savedItems : result.listings;
+  const pool = view === "saved" ? savedItems : result.listings;
+  const listings = useMemo(() => {
+    if (!filters.freshOnly) return pool;
+    return pool.filter((row) => listingFreshness(row, firstSeenAt[row.id]) != null);
+  }, [filters.freshOnly, pool, firstSeenAt]);
   const kommune = kommuneBySlug(filters.municipality);
   const typeSummary = useMemo(
     () => filters.types.map(typeLabel).join(", "),
@@ -166,23 +197,30 @@ function Home() {
   const playableVideos = useMemo(() => listen.listings.filter(isPlayableVideo), [listen.listings]);
   const countLabel =
     view === "saved"
-      ? `${savedItems.length} boliger`
+      ? `${listings.length} boliger`
       : view === "listen"
         ? `${listenCount} opslag`
-        : `${result.totalHits} boliger`;
+        : `${filters.freshOnly ? listings.length : result.totalHits} boliger`;
+
+  useEffect(() => {
+    const missing = result.listings.filter((row) => row.days == null).map((row) => row.id);
+    if (missing.length) rememberFirstSeen(missing);
+  }, [result.listings, rememberFirstSeen]);
 
   useEffect(() => {
     if (!split || (view !== "list" && view !== "saved" && view !== "map")) return;
-    const pool = view === "saved" ? savedItems : result.listings;
     setOpenListing((current) => {
-      if (current && pool.some((row) => row.id === current.id)) return current;
-      return pool[0] ?? null;
+      if (current && listings.some((row) => row.id === current.id)) return current;
+      return listings[0] ?? null;
     });
-  }, [split, view, result.listings, savedItems]);
+  }, [split, view, listings]);
 
   function openHouseId(id: string) {
-    const found = result.listings.find((row) => row.id === id) ?? savedItems.find((row) => row.id === id);
-    if (found) setOpenListing(found);
+    const found = listings.find((row) => row.id === id) ?? savedItems.find((row) => row.id === id);
+    if (found) {
+      markSeen(found.id);
+      setOpenListing(found);
+    }
   }
 
   return (
@@ -405,9 +443,15 @@ function ListenView({
   const playable = result.listings.filter(isPlayableVideo);
   const linkedVideos = result.listings.filter((item) => isVideoPost(item) && !item.video);
   const posts = result.listings.filter((item) => !isVideoPost(item));
+  const editor = <SocialWatchEditor className={split ? undefined : "mb-5"} collapsible={split} />;
 
   if (!result.listings.length) {
-    return <EmptyState saved={false} listen />;
+    return (
+      <div className={split ? "min-h-0 flex-1 overflow-y-auto p-4" : "px-4 pb-24 md:px-6"}>
+        {editor}
+        <EmptyState saved={false} listen flush />
+      </div>
+    );
   }
 
   const showVideo = tab !== "posts" && (playable.length > 0 || linkedVideos.length > 0);
@@ -416,34 +460,39 @@ function ListenView({
 
   if (split) {
     return (
-      <div className="hunt-split">
-        <div className="hunt-detail-pane p-4">
-          {playable.length ? <ReelFeed listings={playable} startId={startId} /> : null}
-          {!playable.length && linkedVideos.length ? (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {linkedVideos.map((listing) => (
-                <SocialCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          ) : null}
-          {!playable.length && !linkedVideos.length ? (
-            <div className="hunt-empty-pane">
-              <p className="font-display text-xl text-fg">Ingen videoer i udsnittet</p>
-              <p className="mt-2 text-sm">Private opslag ligger i ruden til højre.</p>
-            </div>
-          ) : null}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="max-h-[min(50dvh,28rem)] shrink-0 overflow-y-auto border-b border-border px-4 py-3">
+          {editor}
         </div>
-        <div className="hunt-list-pane p-3">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">Private opslag</p>
-          {posts.length ? (
-            <div className="flex flex-col gap-3">
-              {posts.map((listing) => (
-                <SocialCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted">Ingen tekstopslag i området.</p>
-          )}
+        <div className="hunt-split min-h-0 flex-1">
+          <div className="hunt-detail-pane p-4">
+            {playable.length ? <ReelFeed listings={playable} startId={startId} /> : null}
+            {!playable.length && linkedVideos.length ? (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {linkedVideos.map((listing) => (
+                  <SocialCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            ) : null}
+            {!playable.length && !linkedVideos.length ? (
+              <div className="hunt-empty-pane">
+                <p className="font-display text-xl text-fg">Ingen videoer i udsnittet</p>
+                <p className="mt-2 text-sm">Private opslag ligger i ruden til højre.</p>
+              </div>
+            ) : null}
+          </div>
+          <div className="hunt-list-pane p-3">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">Private opslag</p>
+            {posts.length ? (
+              <div className="flex flex-col gap-3">
+                {posts.map((listing) => (
+                  <SocialCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Ingen tekstopslag i området.</p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -451,8 +500,9 @@ function ListenView({
 
   return (
     <div className="px-4 pb-24 md:px-6">
+      {editor}
       <p className="mb-4 max-w-2xl text-sm leading-relaxed text-muted">
-        Boligvideoer fra Instagram og TikTok i {kommuneName}, plus private opslag på GulogGratis, DBA og selvsalg.
+        Fulgte konti tjekkes altid. Tags plus {kommuneName} finder flere Instagram- og TikTok-opslag, sammen med GulogGratis, DBA og selvsalg.
       </p>
       <div className="mb-5 flex overflow-x-auto rounded-full border border-border bg-surface p-1">
         <ViewTab active={tab === "all"} onClick={() => setTab("all")} icon={null} label="Alle" />
@@ -547,9 +597,14 @@ function ViewTab({
   );
 }
 
-function EmptyState({ saved, listen }: { saved: boolean; listen: boolean }) {
+function EmptyState({ saved, listen, flush = false }: { saved: boolean; listen: boolean; flush?: boolean }) {
   return (
-    <div className="mx-4 my-8 rounded-xl border border-dashed border-border-strong bg-surface px-6 py-16 text-center md:mx-6">
+    <div
+      className={cn(
+        "my-8 rounded-xl border border-dashed border-border-strong bg-surface px-6 py-16 text-center",
+        flush ? "mx-0" : "mx-4 md:mx-6",
+      )}
+    >
       <p className="font-display text-2xl">
         {saved ? "Ingen gemte boliger endnu" : listen ? "Ingen sociale opslag i området" : "Ingen boliger matcher"}
       </p>
@@ -557,10 +612,10 @@ function EmptyState({ saved, listen }: { saved: boolean; listen: boolean }) {
         {saved
           ? "Tryk på hjertet på et hus for at lægge det her."
           : listen
-            ? "Lyt kigger Instagram, TikTok, GulogGratis, DBA og privat selvsalg efter huse i den valgte kommune."
+            ? "Lyt kigger fulgte Instagram- og TikTok-konti, dine tags, plus GulogGratis, DBA og privat selvsalg."
             : "Prøv at hæve maksprisen, slå kortudsnittet fra, eller vælg en anden kommune."}
       </p>
-      {!saved ? (
+      {!saved && !listen ? (
         <Button
           className="mt-6"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

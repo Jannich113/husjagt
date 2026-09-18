@@ -30,6 +30,7 @@ const filtersSchema = z.object({
   terrace: z.boolean(),
   elevator: z.boolean(),
   priceDropOnly: z.boolean(),
+  freshOnly: z.boolean(),
   sortBy: z.enum([
     "price",
     "daysListed",
@@ -50,6 +51,11 @@ const filtersSchema = z.object({
       maxLat: z.number(),
     })
     .nullable(),
+});
+
+const listenSchema = filtersSchema.extend({
+  socialAccounts: z.array(z.string().max(80)).max(30).optional(),
+  socialTags: z.array(z.string().max(40)).max(40).optional(),
 });
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -88,9 +94,13 @@ export const searchHouses = createServerFn({ method: "POST" })
   });
 
 export const listenSocial = createServerFn({ method: "POST" })
-  .validator(filtersSchema)
+  .validator(listenSchema)
   .handler(async ({ data }) => {
-    return runSocialListen({ ...DEFAULT_FILTERS, ...data });
+    const { socialAccounts, socialTags, ...rest } = data;
+    return runSocialListen(
+      { ...DEFAULT_FILTERS, ...rest },
+      { accounts: socialAccounts, tags: socialTags },
+    );
   });
 
 export const getListing = createServerFn({ method: "POST" })

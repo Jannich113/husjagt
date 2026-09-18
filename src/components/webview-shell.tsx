@@ -1,6 +1,7 @@
 import { Monitor, Smartphone, Tablet } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { deviceFromSize, sizeClassFromWidth, type DeviceFrame } from "@/lib/listings/layout";
+import { isNativeWebView, isStandaloneDisplay, STANDALONE_MEDIA } from "@/lib/pwa/display-mode";
 import { cn } from "@/lib/utils";
 
 const FRAME_KEY = "husjagt:frame";
@@ -11,9 +12,9 @@ const FRAMES: { id: DeviceFrame; label: string; icon: typeof Smartphone }[] = [
   { id: "laptop", label: "Computer", icon: Monitor },
 ];
 
-function isNativeWebView(): boolean {
+function isNativeWebViewUa(): boolean {
   if (typeof navigator === "undefined") return false;
-  return /HusjagtApp\//i.test(navigator.userAgent);
+  return isNativeWebView(navigator.userAgent);
 }
 
 function readFrame(): DeviceFrame | null {
@@ -32,12 +33,18 @@ export function WebViewShell({ children }: { children: ReactNode }) {
   const [device, setDevice] = useState<DeviceFrame>("laptop");
 
   useEffect(() => {
-    if (isNativeWebView()) {
-      setShell(false);
-      return;
+    function hideStudio() {
+      if (isNativeWebViewUa() || isStandaloneDisplay(window)) {
+        setShell(false);
+        return;
+      }
+      setDevice(readFrame() ?? deviceFromSize(sizeClassFromWidth(window.innerWidth)));
+      setShell(true);
     }
-    setDevice(readFrame() ?? deviceFromSize(sizeClassFromWidth(window.innerWidth)));
-    setShell(true);
+    hideStudio();
+    const mq = window.matchMedia(STANDALONE_MEDIA);
+    mq.addEventListener("change", hideStudio);
+    return () => mq.removeEventListener("change", hideStudio);
   }, []);
 
   if (!shell) return children;

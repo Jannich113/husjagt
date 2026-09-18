@@ -10,7 +10,7 @@ import {
   withLocalVideos,
   type SocialListing,
 } from "./social.ts";
-import snapshot from "./social-snapshot.json";
+import snapshot from "./social-snapshot.json" with { type: "json" };
 
 function video(partial: Partial<SocialListing> & Pick<SocialListing, "id" | "title" | "price">): SocialListing {
   return {
