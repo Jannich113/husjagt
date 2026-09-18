@@ -25,7 +25,6 @@ import {
   parseHuntSearch,
   rememberHunt,
   viewFromHunt,
-  appShareCopy,
   type HuntSearch,
   type HuntView,
 } from "@/lib/listings/share";
@@ -96,7 +95,7 @@ function Home() {
     () => savedIds.map((id) => savedMap[id]).filter((row): row is Listing => Boolean(row)),
     [savedIds, savedMap],
   );
-  const share = useMemo(() => appShareCopy(), []);
+  const share = useMemo(() => huntShareCopy(filters, view), [filters, view]);
   const size = useSizeClass();
   const split = size !== "compact";
 
@@ -249,7 +248,7 @@ function Home() {
               <ShareButton
                 title={share.title}
                 text={share.text}
-                url="/"
+                url={share.url}
                 label="Del"
                 className="h-9 flex-none px-3.5 text-sm"
               />
