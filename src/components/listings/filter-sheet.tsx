@@ -24,7 +24,6 @@ import {
   DEFAULT_FILTERS,
   ENERGY_LABELS,
   PROPERTY_TYPES,
-  SORT_OPTIONS,
   advancedFilterCount,
   type SearchFilters,
 } from "@/lib/listings/types";
@@ -332,29 +331,22 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
                       </Chip>
                     </div>
                   </FilterSection>
-
-                  <FilterSection title="Sortér">
-                    <div className="flex flex-wrap gap-2">
-                      {SORT_OPTIONS.map((opt) => {
-                        const active = draft.sortBy === opt.id && draft.sortAscending === opt.ascending;
-                        return (
-                          <Chip
-                            key={`${opt.id}-${opt.ascending}`}
-                            active={active}
-                            onClick={() => setDraft((d) => ({ ...d, sortBy: opt.id, sortAscending: opt.ascending }))}
-                          >
-                            {opt.label}
-                          </Chip>
-                        );
-                      })}
-                    </div>
-                  </FilterSection>
                 </div>
               ) : null}
             </section>
           </div>
           <div className="flex gap-2 border-t border-border px-6 py-4">
-            <Button variant="ghost" className="flex-1" onClick={() => setDraft({ ...DEFAULT_FILTERS })}>
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={() =>
+                setDraft({
+                  ...DEFAULT_FILTERS,
+                  sortBy: draft.sortBy,
+                  sortAscending: draft.sortAscending,
+                })
+              }
+            >
               Nulstil
             </Button>
             <Button className="flex-[2]" onClick={apply}>

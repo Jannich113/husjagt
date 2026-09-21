@@ -2,6 +2,7 @@ import { Heart, LayoutGrid, Map as MapIcon, Radio } from "lucide-react";
 import { FilterSheet } from "@/components/listings/filter-sheet";
 import { PlacePicker } from "@/components/listings/place-picker";
 import { ShareButton } from "@/components/listings/share-button";
+import { SortMenu } from "@/components/listings/sort-menu";
 import { StreetSearch } from "@/components/listings/street-search";
 import { moduleOn } from "@/lib/hunt/modules";
 import type { District } from "@/lib/listings/districts";
@@ -69,6 +70,7 @@ export function HuntHeader({
             label="Del"
             className="h-9 flex-none px-3.5 text-sm"
           />
+          {view !== "listen" ? <SortMenu value={filters} onChange={onApply} /> : null}
           <FilterSheet
             value={filters}
             onChange={onApply}

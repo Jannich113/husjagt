@@ -173,7 +173,6 @@ export function advancedFilterCount(filters: SearchFilters): number {
   if (filters.freshOnly) n += 1;
   if (filters.boxes?.length) n += 1;
   if (filters.districts?.length) n += 1;
-  if (filters.sortBy !== "price" || !filters.sortAscending) n += 1;
   return n;
 }
 
