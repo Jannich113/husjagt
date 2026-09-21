@@ -45,6 +45,8 @@ describe("visibleListings", () => {
       streetQuery: "aavej",
       keywords: ["have"],
       keywordMode: "any",
+      sortBy: "price",
+      sortAscending: true,
     });
     assert.deepEqual(
       rows.map((row) => row.id),
@@ -61,6 +63,25 @@ describe("visibleListings", () => {
       streetQuery: "",
       keywords: [],
       keywordMode: "all",
+      sortBy: "daysListed",
+      sortAscending: true,
+    });
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      ["other", "close"],
+    );
+  });
+
+  it("reorders the pool by the selected sort", () => {
+    const rows = visibleListings({
+      pool: [close, other],
+      freshOnly: false,
+      firstSeenAt: {},
+      streetQuery: "",
+      keywords: [],
+      keywordMode: "any",
+      sortBy: "daysListed",
+      sortAscending: true,
     });
     assert.deepEqual(
       rows.map((row) => row.id),

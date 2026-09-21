@@ -202,8 +202,10 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         streetQuery,
         keywords: keywordWords,
         keywordMode,
+        sortBy: filters.sortBy,
+        sortAscending: filters.sortAscending,
       }),
-    [pool, filters.freshOnly, firstSeenAt, streetQuery, keywordWords, keywordMode],
+    [pool, filters.freshOnly, filters.sortBy, filters.sortAscending, firstSeenAt, streetQuery, keywordWords, keywordMode],
   );
   const typeSummary = useMemo(() => filters.types.map(typeLabel).join(", "), [filters.types]);
   const extras = useMemo(() => extraFilterLabels(filters), [filters]);

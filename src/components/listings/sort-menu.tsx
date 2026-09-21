@@ -20,6 +20,20 @@ function currentOption(filters: SearchFilters) {
   );
 }
 
+function menuBox(button: DOMRect) {
+  const view = window.visualViewport;
+  const vw = view?.width ?? window.innerWidth;
+  const vh = view?.height ?? window.innerHeight;
+  const vx = view?.offsetLeft ?? 0;
+  const vy = view?.offsetTop ?? 0;
+  const width = Math.min(288, Math.max(200, vw - 16));
+  let left = button.left;
+  if (left + width > vx + vw - 8) left = vx + vw - width - 8;
+  if (left < vx + 8) left = vx + 8;
+  const top = Math.min(button.bottom + 6, vy + vh - 180);
+  return { top, left, width, maxHeight: Math.max(160, vy + vh - top - 12) };
+}
+
 export function SortMenu({
   value,
   onChange,
@@ -28,7 +42,7 @@ export function SortMenu({
   onChange: (next: SearchFilters) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 8, width: 288, maxHeight: 320 });
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -37,8 +51,7 @@ export function SortMenu({
 
   useLayoutEffect(() => {
     if (!open || !button.current) return;
-    const rect = button.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+    setPos(menuBox(button.current.getBoundingClientRect()));
   }, [open]);
 
   useEffect(() => {
@@ -52,17 +65,17 @@ export function SortMenu({
       if (e.key === "Escape") setOpen(false);
     }
     function onWin() {
-      setOpen(false);
+      if (button.current) setPos(menuBox(button.current.getBoundingClientRect()));
     }
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     window.addEventListener("resize", onWin);
-    window.addEventListener("scroll", onWin, true);
+    window.visualViewport?.addEventListener("resize", onWin);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onWin);
-      window.removeEventListener("scroll", onWin, true);
+      window.visualViewport?.removeEventListener("resize", onWin);
     };
   }, [open]);
 
@@ -73,8 +86,8 @@ export function SortMenu({
           id={menuId}
           role="listbox"
           aria-label="Sortér"
-          className="fixed z-[80] min-w-56 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-card"
-          style={{ top: pos.top, right: pos.right }}
+          className="fixed z-[80] overflow-y-auto rounded-xl border border-border bg-surface py-1 shadow-card"
+          style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
         >
           {SORT_OPTIONS.map((opt) => {
             const active = opt.id === current.id && opt.ascending === current.ascending;
