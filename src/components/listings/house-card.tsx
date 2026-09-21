@@ -7,7 +7,6 @@ import { formatDays, formatKr, formatM2, formatRooms, sourceLabel, typeLabel } f
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import { matchedKeywords, useKeywords } from "@/lib/listings/keywords";
 import { moduleOn } from "@/lib/hunt/modules";
-import { isSimilarListing, usePreference } from "@/lib/listings/similar";
 import { useSeen } from "@/lib/listings/seen";
 import type { Listing } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
@@ -76,9 +75,6 @@ export function HouseCard({
   const drop = listing.priceChange != null && listing.priceChange < -0.5;
   const keywordWords = useKeywords((s) => s.words);
   const keywordHits = moduleOn("keywords") ? matchedKeywords(listing, keywordWords) : [];
-  const preference = usePreference((s) => s.listing);
-  const isPref = moduleOn("preference") && preference?.id === listing.id;
-  const similar = moduleOn("preference") && isSimilarListing(listing, preference);
 
   if (layout === "row") {
     return (
@@ -119,9 +115,8 @@ export function HouseCard({
                 {listing.zip} {listing.city} · {formatM2(listing.area)}
                 {listing.source !== "boligsiden" ? ` · ${sourceLabel(listing)}` : ""}
               </p>
-              {isPref || similar || keywordHits.length ? (
+              {keywordHits.length ? (
                 <p className="mt-1 flex flex-wrap gap-1">
-                  {isPref ? <MetaPill>Dit hus</MetaPill> : similar ? <MetaPill>Ligner dit hus</MetaPill> : null}
                   {keywordHits.slice(0, 3).map((word) => (
                     <MetaPill key={word}>{word}</MetaPill>
                   ))}
@@ -204,9 +199,8 @@ export function HouseCard({
             {sourceLabel(listing)}
             {listing.days != null ? ` · ${formatDays(listing.days)} på markedet` : ""}
           </p>
-          {isPref || similar || keywordHits.length ? (
+          {keywordHits.length ? (
             <p className="mt-2 flex flex-wrap gap-1">
-              {isPref ? <MetaPill>Dit hus</MetaPill> : similar ? <MetaPill>Ligner dit hus</MetaPill> : null}
               {keywordHits.slice(0, 4).map((word) => (
                 <MetaPill key={word}>{word}</MetaPill>
               ))}

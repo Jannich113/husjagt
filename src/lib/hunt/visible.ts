@@ -1,8 +1,7 @@
 import { listingFreshness } from "../listings/fresh";
 import { filterByKeywords, type KeywordMode } from "../listings/keywords";
-import { rankBySimilarity } from "../listings/similar";
 import { filterByStreetQuery } from "../listings/street-query";
-import type { Listing, SearchFilters } from "../listings/types";
+import type { Listing } from "../listings/types";
 
 export function visibleListings({
   pool,
@@ -11,8 +10,6 @@ export function visibleListings({
   streetQuery,
   keywords,
   keywordMode,
-  preference,
-  sortBy,
 }: {
   pool: Listing[];
   freshOnly: boolean;
@@ -20,8 +17,6 @@ export function visibleListings({
   streetQuery: string;
   keywords: string[];
   keywordMode: KeywordMode;
-  preference: Listing | null;
-  sortBy: SearchFilters["sortBy"];
 }): Listing[] {
   let rows = pool;
   if (freshOnly) {
@@ -29,6 +24,5 @@ export function visibleListings({
   }
   rows = filterByStreetQuery(rows, streetQuery);
   rows = filterByKeywords(rows, keywords, keywordMode);
-  if (sortBy === "similarity") rows = rankBySimilarity(rows, preference);
   return rows;
 }

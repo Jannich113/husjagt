@@ -12,7 +12,6 @@ export const HUNT_MODULES = {
   saved: { enabled: true, label: "Gemte huse" },
   streetSearch: { enabled: true, label: "Søg på vej og adresse" },
   keywords: { enabled: true, label: "Nøgleord i teksten" },
-  preference: { enabled: true, label: "Referencehus og lignende" },
 } as const;
 
 export type HuntModuleId = keyof typeof HUNT_MODULES;

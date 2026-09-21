@@ -37,7 +37,6 @@ const filtersSchema = z.object({
     "monthlyExpense",
     "lotArea",
     "housingArea",
-    "similarity",
   ]),
   sortAscending: z.boolean(),
   page: z.number().int().min(1).max(40),

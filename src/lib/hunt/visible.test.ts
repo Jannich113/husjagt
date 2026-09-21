@@ -34,20 +34,17 @@ function house(over: Partial<Listing> & Pick<Listing, "id" | "street">): Listing
 }
 
 describe("visibleListings", () => {
-  const pref = house({ id: "pref", street: "Aavej 1" });
   const close = house({ id: "close", street: "Aavej 3", descriptionBody: "Have og udestue" });
   const other = house({ id: "other", street: "Skovvej 8", days: 2, descriptionBody: "Lejlighed i byen" });
 
-  it("applies street, keywords and mest-lig sort on the current pool", () => {
+  it("applies street and keyword filters on the current pool", () => {
     const rows = visibleListings({
-      pool: [other, close, pref],
+      pool: [other, close],
       freshOnly: false,
       firstSeenAt: {},
       streetQuery: "aavej",
       keywords: ["have"],
       keywordMode: "any",
-      preference: pref,
-      sortBy: "similarity",
     });
     assert.deepEqual(
       rows.map((row) => row.id),
@@ -64,8 +61,6 @@ describe("visibleListings", () => {
       streetQuery: "",
       keywords: [],
       keywordMode: "all",
-      preference: null,
-      sortBy: "price",
     });
     assert.deepEqual(
       rows.map((row) => row.id),
@@ -73,3 +68,4 @@ describe("visibleListings", () => {
     );
   });
 });
+

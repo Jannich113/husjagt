@@ -116,14 +116,11 @@ const SORT_KEYS = new Set([
   "monthlyExpense",
   "lotArea",
   "housingArea",
-  "similarity",
-  "lig",
 ]);
 
 function parseSort(raw: string | undefined): SearchFilters["sortBy"] | null {
   if (!raw) return null;
-  if (raw === "lig" || raw === "similarity") return "similarity";
-  if (SORT_KEYS.has(raw) && raw !== "lig") return raw as SearchFilters["sortBy"];
+  if (SORT_KEYS.has(raw)) return raw as SearchFilters["sortBy"];
   return null;
 }
 
@@ -160,7 +157,7 @@ export function parseHuntSearch(raw: Record<string, unknown> | null | undefined)
   if (asFlag(raw.fald) || asFlag(raw.priceDropOnly)) out.fald = 1;
   if (asFlag(raw.ny) || asFlag(raw.freshOnly)) out.ny = 1;
   const sort = parseSort(asString(raw.sort));
-  if (sort) out.sort = sort === "similarity" ? "lig" : sort;
+  if (sort) out.sort = sort;
   if (asFlag(raw.desc) || raw.asc === 0 || raw.asc === "0" || raw.asc === false) {
     out.desc = 1;
   }
@@ -253,8 +250,7 @@ export function huntFromFilters(
   if (filters.elevator) out.elevator = 1;
   if (filters.priceDropOnly) out.fald = 1;
   if (filters.freshOnly) out.ny = 1;
-  if (filters.sortBy === "similarity") out.sort = "lig";
-  else if (filters.sortBy !== "price") out.sort = filters.sortBy;
+  if (filters.sortBy !== "price") out.sort = filters.sortBy;
   if (!filters.sortAscending) out.desc = 1;
   if (filters.boxes?.length) out.kort = encodeBoxes(filters.boxes);
   if (filters.districts?.length) out.bydel = filters.districts.join(",");

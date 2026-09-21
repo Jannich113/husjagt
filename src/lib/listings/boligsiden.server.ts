@@ -87,8 +87,7 @@ function buildSearchUrl(filters: SearchFilters): string {
   if (filters.balcony) url.searchParams.set("balcony", "true");
   if (filters.terrace) url.searchParams.set("terrace", "true");
   if (filters.elevator) url.searchParams.set("elevator", "true");
-  const sortBy =
-    filters.sortBy === "housingArea" || filters.sortBy === "similarity" ? "price" : filters.sortBy;
+  const sortBy = filters.sortBy === "housingArea" ? "price" : filters.sortBy;
   url.searchParams.set("sortBy", sortBy);
   url.searchParams.set("sortAscending", String(filters.sortAscending));
   url.searchParams.set("per_page", String(filters.perPage));

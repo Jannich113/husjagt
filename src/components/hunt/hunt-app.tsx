@@ -22,7 +22,6 @@ import {
   type HuntSearch,
   type HuntView,
 } from "@/lib/listings/share";
-import { usePreference } from "@/lib/listings/similar";
 import { useSeen } from "@/lib/listings/seen";
 import {
   displayedListenListings,
@@ -84,8 +83,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const hydrateKeywords = useKeywords((s) => s.hydrate);
   const keywordWords = useKeywords((s) => s.words);
   const keywordMode = useKeywords((s) => s.mode);
-  const hydratePreference = usePreference((s) => s.hydrate);
-  const preference = usePreference((s) => s.listing);
   const savedItems = useMemo(
     () => savedIds.map((id) => savedMap[id]).filter((row): row is Listing => Boolean(row)),
     [savedIds, savedMap],
@@ -101,10 +98,9 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     hydrateFirstSeen();
     hydrateWatch();
     hydrateKeywords();
-    hydratePreference();
     document.body.style.removeProperty("pointer-events");
     document.body.style.removeProperty("overflow");
-  }, [hydrate, hydrateSeen, hydrateFirstSeen, hydrateWatch, hydrateKeywords, hydratePreference]);
+  }, [hydrate, hydrateSeen, hydrateFirstSeen, hydrateWatch, hydrateKeywords]);
 
   useEffect(() => {
     rememberHunt(hunt);
@@ -217,10 +213,8 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         streetQuery,
         keywords: keywordWords,
         keywordMode,
-        preference,
-        sortBy: filters.sortBy,
       }),
-    [pool, filters.freshOnly, filters.sortBy, firstSeenAt, streetQuery, keywordWords, keywordMode, preference],
+    [pool, filters.freshOnly, firstSeenAt, streetQuery, keywordWords, keywordMode],
   );
   const kommune = kommuneBySlug(filters.municipality);
   const typeSummary = useMemo(() => filters.types.map(typeLabel).join(", "), [filters.types]);
