@@ -5,27 +5,31 @@ import { Button } from "@/components/ui/button";
 import { PlacePicker } from "@/components/listings/place-picker";
 import { FilterArea } from "@/components/listings/filter-area";
 import { FilterChip as Chip } from "@/components/listings/filter-chip";
-import { formatMio } from "@/lib/listings/format";
+import { BoundPair, FilterSection, MaxRange, QuickPicks } from "@/components/listings/filter-range";
+import { KeywordWatch } from "@/components/listings/keyword-watch";
+import { formatKr, formatMio } from "@/lib/listings/format";
+import { moduleOn } from "@/lib/hunt/modules";
+import {
+  AREA_BOUND,
+  DAYS_BOUND,
+  EXPENSE_BOUND,
+  LOT_BOUND,
+  M2_PRICE_BOUND,
+  PRICE_BOUND,
+  ROOM_BOUND,
+  YEAR_BOUND,
+} from "@/lib/listings/filter-range";
 import type { District } from "@/lib/listings/districts";
 import {
   DEFAULT_FILTERS,
   ENERGY_LABELS,
   PROPERTY_TYPES,
-  SORT_OPTIONS,
   advancedFilterCount,
   type SearchFilters,
 } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 
-const PRICE_STEPS = [500_000, 1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000, 4_000_000, 5_000_000, 8_000_000];
-const PRICE_MIN_STEPS = [250_000, 500_000, 750_000, 1_000_000, 1_500_000];
-const YEAR_FROM = [1950, 1970, 1990, 2000, 2010];
-const YEAR_TO = [1980, 2000, 2010, 2020];
-const LOT_STEPS = [400, 600, 800, 1000];
-const LOT_MAX_STEPS = [400, 600, 800, 1200];
-const EXPENSE_STEPS = [2_000, 3_000, 4_000, 5_000];
-const DAYS_STEPS = [7, 14, 30, 60, 90];
-const M2_PRICE_STEPS = [10_000, 15_000, 20_000, 25_000];
+const PRICE_PRESETS = [1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000, 4_000_000, 5_000_000, 8_000_000, 10_000_000];
 
 type Props = {
   value: SearchFilters;
@@ -84,16 +88,14 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
         <SlidersHorizontal className="size-4" />
         Filtre
         {extra > 0 ? (
-          <span className="rounded-full bg-primary px-1.5 text-xs font-medium text-primary-fg">
-            {extra}
-          </span>
+          <span className="rounded-full bg-primary px-1.5 text-xs font-medium text-primary-fg">{extra}</span>
         ) : null}
       </Button>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-fg/40" />
-        <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-h-[88dvh] max-w-lg flex-col rounded-t-xl bg-bg outline-none">
+        <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-h-[92dvh] max-w-xl flex-col rounded-t-xl bg-bg outline-none">
           <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border-strong" />
-          <div className="flex items-center justify-between px-5 py-3">
+          <div className="flex items-center justify-between px-6 py-3">
             <Drawer.Title className="font-display text-2xl">Søgning</Drawer.Title>
             <button
               type="button"
@@ -104,13 +106,12 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
               <X className="size-5" />
             </button>
           </div>
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 pb-4">
-            <section>
+          <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 pb-6">
+            <FilterSection title="Område">
               <PlacePicker value={draft} onChange={setDraft} />
-            </section>
+            </FilterSection>
 
-            <section>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Boligtype</p>
+            <FilterSection title="Boligtype">
               <div className="flex flex-wrap gap-2">
                 {PROPERTY_TYPES.map((t) => (
                   <Chip key={t.id} active={draft.types.includes(t.id)} onClick={() => toggleType(t.id)}>
@@ -118,59 +119,65 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
                   </Chip>
                 ))}
               </div>
-            </section>
+            </FilterSection>
 
-            <section>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-                Makspris · {formatMio(draft.priceMax)}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {PRICE_STEPS.map((n) => (
-                  <Chip key={n} active={draft.priceMax === n} onClick={() => setDraft((d) => ({ ...d, priceMax: n }))}>
-                    {formatMio(n)}
-                  </Chip>
-                ))}
-                <Chip active={draft.priceMax == null} onClick={() => setDraft((d) => ({ ...d, priceMax: null }))}>
-                  Ingen grænse
-                </Chip>
-              </div>
-            </section>
+            <FilterSection title="Pris" hint="Træk eller skriv beløbet. Tomt felt = ingen grænse.">
+              <BoundPair
+                minValue={draft.priceMin}
+                maxValue={draft.priceMax}
+                bound={PRICE_BOUND}
+                onMin={(priceMin) => setDraft((d) => ({ ...d, priceMin }))}
+                onMax={(priceMax) => setDraft((d) => ({ ...d, priceMax }))}
+                minLabel="Min. pris"
+                maxLabel="Maks. pris"
+                emptyMin="0 kr"
+                emptyMax="Ingen grænse"
+                suffix="kr"
+                formatMax={formatMio}
+              />
+              <QuickPicks
+                values={PRICE_PRESETS}
+                active={draft.priceMax}
+                onPick={(priceMax) => setDraft((d) => ({ ...d, priceMax }))}
+                format={formatMio}
+                noneLabel="Ingen grænse"
+                noneActive={draft.priceMax == null}
+                onNone={() => setDraft((d) => ({ ...d, priceMax: null }))}
+              />
+            </FilterSection>
 
-            <section className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Min. værelser</p>
-                <div className="flex flex-wrap gap-2">
-                  {[null, 3, 4, 5].map((n) => (
-                    <Chip
-                      key={String(n)}
-                      active={draft.roomsMin === n}
-                      onClick={() => setDraft((d) => ({ ...d, roomsMin: n }))}
-                    >
-                      {n == null ? "Alle" : `${n}+`}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Min. m²</p>
-                <div className="flex flex-wrap gap-2">
-                  {[null, 80, 120, 150].map((n) => (
-                    <Chip
-                      key={String(n)}
-                      active={draft.areaMin === n}
-                      onClick={() => setDraft((d) => ({ ...d, areaMin: n }))}
-                    >
-                      {n == null ? "Alle" : `${n}+`}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-            </section>
+            <FilterSection title="Værelser">
+              <BoundPair
+                minValue={draft.roomsMin}
+                maxValue={draft.roomsMax}
+                bound={ROOM_BOUND}
+                onMin={(roomsMin) => setDraft((d) => ({ ...d, roomsMin }))}
+                onMax={(roomsMax) => setDraft((d) => ({ ...d, roomsMax }))}
+                minLabel="Mindst"
+                maxLabel="Højst"
+                emptyMin="Alle"
+                emptyMax="Ingen grænse"
+              />
+            </FilterSection>
+
+            <FilterSection title="Boligareal">
+              <BoundPair
+                minValue={draft.areaMin}
+                maxValue={draft.areaMax}
+                bound={AREA_BOUND}
+                onMin={(areaMin) => setDraft((d) => ({ ...d, areaMin }))}
+                onMax={(areaMax) => setDraft((d) => ({ ...d, areaMax }))}
+                minLabel="Mindst"
+                maxLabel="Højst"
+                emptyMin="Alle"
+                emptyMax="Ingen grænse"
+                suffix="m²"
+              />
+            </FilterSection>
 
             <FilterArea draft={draft} onDraft={setDraft} catalog={catalog} />
 
-            <section>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Nye boliger</p>
+            <FilterSection title="Nye boliger" hint="Ny i dag og inden for 7 dage på markedet — ikke det samme som uåbnede.">
               <div className="flex flex-wrap gap-2">
                 <Chip active={!draft.freshOnly} onClick={() => setDraft((d) => ({ ...d, freshOnly: false }))}>
                   Alle
@@ -179,46 +186,26 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
                   Kun nye
                 </Chip>
               </div>
-              <p className="mt-1.5 text-xs text-faint">Ny i dag og inden for 7 dage på markedet — ikke det samme som uåbnede.</p>
-            </section>
+            </FilterSection>
+
+            {moduleOn("keywords") ? <KeywordWatch /> : null}
 
             <section className="rounded-xl border border-border bg-surface">
               <button
                 type="button"
-                className="flex h-12 w-full items-center justify-between px-4 text-left"
+                className="flex h-14 w-full items-center justify-between px-4 text-left"
                 onClick={() => setAdvanced((v) => !v)}
                 aria-expanded={advanced}
               >
                 <span className="text-sm font-medium">
                   Avanceret
-                  {draftExtra > 0 ? (
-                    <span className="ml-2 text-muted">({draftExtra})</span>
-                  ) : null}
+                  {draftExtra > 0 ? <span className="ml-2 text-muted">({draftExtra})</span> : null}
                 </span>
                 <ChevronDown className={cn("size-4 text-muted transition-transform", advanced && "rotate-180")} />
               </button>
               {advanced ? (
-                <div className="space-y-5 border-t border-border px-4 py-4">
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Min. pris</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip active={draft.priceMin == null} onClick={() => setDraft((d) => ({ ...d, priceMin: null }))}>
-                        Alle
-                      </Chip>
-                      {PRICE_MIN_STEPS.map((n) => (
-                        <Chip
-                          key={n}
-                          active={draft.priceMin === n}
-                          onClick={() => setDraft((d) => ({ ...d, priceMin: n }))}
-                        >
-                          {formatMio(n)}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Energimærke</p>
+                <div className="space-y-8 border-t border-border px-4 py-6">
+                  <FilterSection title="Energimærke" hint="A2010/A2015 tæller som A. Vælg ét eller flere.">
                     <div className="flex flex-wrap gap-2">
                       {ENERGY_LABELS.map((letter) => (
                         <Chip
@@ -230,223 +217,110 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
                         </Chip>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-xs text-faint">A2010/A2015 tæller som A. Vælg ét eller flere.</p>
-                  </div>
+                  </FilterSection>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Bygget efter</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Chip active={draft.yearFrom == null} onClick={() => setDraft((d) => ({ ...d, yearFrom: null }))}>
-                          Alle
-                        </Chip>
-                        {YEAR_FROM.map((n) => (
-                          <Chip
-                            key={n}
-                            active={draft.yearFrom === n}
-                            onClick={() => setDraft((d) => ({ ...d, yearFrom: n }))}
-                          >
-                            {n}
-                          </Chip>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Bygget før</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Chip active={draft.yearTo == null} onClick={() => setDraft((d) => ({ ...d, yearTo: null }))}>
-                          Alle
-                        </Chip>
-                        {YEAR_TO.map((n) => (
-                          <Chip
-                            key={n}
-                            active={draft.yearTo === n}
-                            onClick={() => setDraft((d) => ({ ...d, yearTo: n }))}
-                          >
-                            {n}
-                          </Chip>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <FilterSection title="Byggeår">
+                    <BoundPair
+                      minValue={draft.yearFrom}
+                      maxValue={draft.yearTo}
+                      bound={YEAR_BOUND}
+                      onMin={(yearFrom) => setDraft((d) => ({ ...d, yearFrom }))}
+                      onMax={(yearTo) => setDraft((d) => ({ ...d, yearTo }))}
+                      minLabel="Efter"
+                      maxLabel="Før"
+                      emptyMin="Alle"
+                      emptyMax="Nu"
+                    />
+                  </FilterSection>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Maks. værelser</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[null, 4, 5, 6].map((n) => (
-                          <Chip
-                            key={String(n)}
-                            active={draft.roomsMax === n}
-                            onClick={() => setDraft((d) => ({ ...d, roomsMax: n }))}
-                          >
-                            {n == null ? "Alle" : `${n}`}
-                          </Chip>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Maks. m²</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[null, 100, 150, 200].map((n) => (
-                          <Chip
-                            key={String(n)}
-                            active={draft.areaMax === n}
-                            onClick={() => setDraft((d) => ({ ...d, areaMax: n }))}
-                          >
-                            {n == null ? "Alle" : `${n}`}
-                          </Chip>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <FilterSection title="Grund">
+                    <BoundPair
+                      minValue={draft.lotMin}
+                      maxValue={draft.lotMax}
+                      bound={LOT_BOUND}
+                      onMin={(lotMin) => setDraft((d) => ({ ...d, lotMin }))}
+                      onMax={(lotMax) => setDraft((d) => ({ ...d, lotMax }))}
+                      minLabel="Mindst"
+                      maxLabel="Højst"
+                      emptyMin="Alle"
+                      emptyMax="Ingen grænse"
+                      suffix="m²"
+                    />
+                  </FilterSection>
 
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Min. grund</p>
+                  <FilterSection title="Ejerudgift / md">
+                    <MaxRange
+                      value={draft.expenseMax}
+                      bound={EXPENSE_BOUND}
+                      onChange={(expenseMax) => setDraft((d) => ({ ...d, expenseMax }))}
+                      label="Maks. pr. måned"
+                      suffix="kr"
+                      format={(v) => (v == null ? "Ingen grænse" : `${formatKr(v)}/md`)}
+                    />
+                  </FilterSection>
+
+                  <FilterSection title="m²-pris">
+                    <MaxRange
+                      value={draft.m2PriceMax}
+                      bound={M2_PRICE_BOUND}
+                      onChange={(m2PriceMax) => setDraft((d) => ({ ...d, m2PriceMax }))}
+                      label="Maks. kr pr. m²"
+                      suffix="kr"
+                    />
+                  </FilterSection>
+
+                  <FilterSection title="Liggetid">
+                    <MaxRange
+                      value={draft.daysMax}
+                      bound={DAYS_BOUND}
+                      onChange={(daysMax) => setDraft((d) => ({ ...d, daysMax }))}
+                      label="Maks. dage"
+                      suffix="dage"
+                    />
+                  </FilterSection>
+
+                  <FilterSection title="Postnr. og by">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <label>
+                        <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Postnr.</span>
+                        <input
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={draft.zipCode ?? ""}
+                          onChange={(e) =>
+                            setDraft((d) => ({ ...d, zipCode: e.target.value.replace(/\D/g, "").slice(0, 4) || null }))
+                          }
+                          placeholder="fx 5000"
+                          className="h-11 w-full rounded-lg border border-border bg-bg px-3 text-sm outline-none focus:border-primary"
+                        />
+                      </label>
+                      <label>
+                        <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">By</span>
+                        <input
+                          value={draft.city ?? ""}
+                          onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value || null }))}
+                          placeholder="fx Odense C"
+                          className="h-11 w-full rounded-lg border border-border bg-bg px-3 text-sm outline-none focus:border-primary"
+                        />
+                      </label>
+                    </div>
+                  </FilterSection>
+
+                  <FilterSection
+                    title="Faciliteter"
+                    hint="Altan, terrasse og elevator rammer især lejligheder. Kælder virker på huse."
+                  >
                     <div className="flex flex-wrap gap-2">
-                      <Chip active={draft.lotMin == null} onClick={() => setDraft((d) => ({ ...d, lotMin: null }))}>
-                        Alle
-                      </Chip>
-                      {LOT_STEPS.map((n) => (
-                        <Chip
-                          key={n}
-                          active={draft.lotMin === n}
-                          onClick={() => setDraft((d) => ({ ...d, lotMin: n }))}
-                        >
-                          {n}+ m²
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Maks. grund</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip active={draft.lotMax == null} onClick={() => setDraft((d) => ({ ...d, lotMax: null }))}>
-                        Alle
-                      </Chip>
-                      {LOT_MAX_STEPS.map((n) => (
-                        <Chip
-                          key={n}
-                          active={draft.lotMax === n}
-                          onClick={() => setDraft((d) => ({ ...d, lotMax: n }))}
-                        >
-                          {n} m²
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Maks. ejerudgift / md</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip
-                        active={draft.expenseMax == null}
-                        onClick={() => setDraft((d) => ({ ...d, expenseMax: null }))}
-                      >
-                        Alle
-                      </Chip>
-                      {EXPENSE_STEPS.map((n) => (
-                        <Chip
-                          key={n}
-                          active={draft.expenseMax === n}
-                          onClick={() => setDraft((d) => ({ ...d, expenseMax: n }))}
-                        >
-                          {n.toLocaleString("da-DK")} kr
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Maks. m²-pris</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip
-                        active={draft.m2PriceMax == null}
-                        onClick={() => setDraft((d) => ({ ...d, m2PriceMax: null }))}
-                      >
-                        Alle
-                      </Chip>
-                      {M2_PRICE_STEPS.map((n) => (
-                        <Chip
-                          key={n}
-                          active={draft.m2PriceMax === n}
-                          onClick={() => setDraft((d) => ({ ...d, m2PriceMax: n }))}
-                        >
-                          {n.toLocaleString("da-DK")} kr
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Maks. liggetid</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip active={draft.daysMax == null} onClick={() => setDraft((d) => ({ ...d, daysMax: null }))}>
-                        Alle
-                      </Chip>
-                      {DAYS_STEPS.map((n) => (
-                        <Chip
-                          key={n}
-                          active={draft.daysMax === n}
-                          onClick={() => setDraft((d) => ({ ...d, daysMax: n }))}
-                        >
-                          {n} dage
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Postnr.</p>
-                      <input
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={draft.zipCode ?? ""}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, zipCode: e.target.value.replace(/\D/g, "").slice(0, 4) || null }))
-                        }
-                        placeholder="fx 5000"
-                        className="h-11 w-full rounded-lg border border-border bg-bg px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">By</p>
-                      <input
-                        value={draft.city ?? ""}
-                        onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value || null }))}
-                        placeholder="fx Odense C"
-                        className="h-11 w-full rounded-lg border border-border bg-bg px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Faciliteter</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip
-                        active={draft.basement}
-                        onClick={() => setDraft((d) => ({ ...d, basement: !d.basement }))}
-                      >
+                      <Chip active={draft.basement} onClick={() => setDraft((d) => ({ ...d, basement: !d.basement }))}>
                         Kælder
                       </Chip>
-                      <Chip
-                        active={draft.balcony}
-                        onClick={() => setDraft((d) => ({ ...d, balcony: !d.balcony }))}
-                      >
+                      <Chip active={draft.balcony} onClick={() => setDraft((d) => ({ ...d, balcony: !d.balcony }))}>
                         Altan
                       </Chip>
-                      <Chip
-                        active={draft.terrace}
-                        onClick={() => setDraft((d) => ({ ...d, terrace: !d.terrace }))}
-                      >
+                      <Chip active={draft.terrace} onClick={() => setDraft((d) => ({ ...d, terrace: !d.terrace }))}>
                         Terrasse
                       </Chip>
-                      <Chip
-                        active={draft.elevator}
-                        onClick={() => setDraft((d) => ({ ...d, elevator: !d.elevator }))}
-                      >
+                      <Chip active={draft.elevator} onClick={() => setDraft((d) => ({ ...d, elevator: !d.elevator }))}>
                         Elevator
                       </Chip>
                       <Chip
@@ -456,39 +330,22 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
                         Kun prisfald
                       </Chip>
                     </div>
-                    <p className="mt-1.5 text-xs text-faint">
-                      Altan, terrasse og elevator rammer især lejligheder. Kælder virker på huse.
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Sortér</p>
-                    <div className="flex flex-wrap gap-2">
-                      {SORT_OPTIONS.map((opt) => {
-                        const active = draft.sortBy === opt.id && draft.sortAscending === opt.ascending;
-                        return (
-                          <Chip
-                            key={`${opt.id}-${opt.ascending}`}
-                            active={active}
-                            onClick={() =>
-                              setDraft((d) => ({ ...d, sortBy: opt.id, sortAscending: opt.ascending }))
-                            }
-                          >
-                            {opt.label}
-                          </Chip>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  </FilterSection>
                 </div>
               ) : null}
             </section>
           </div>
-          <div className="flex gap-2 border-t border-border px-5 py-4">
+          <div className="flex gap-2 border-t border-border px-6 py-4">
             <Button
               variant="ghost"
               className="flex-1"
-              onClick={() => setDraft({ ...DEFAULT_FILTERS })}
+              onClick={() =>
+                setDraft({
+                  ...DEFAULT_FILTERS,
+                  sortBy: draft.sortBy,
+                  sortAscending: draft.sortAscending,
+                })
+              }
             >
               Nulstil
             </Button>

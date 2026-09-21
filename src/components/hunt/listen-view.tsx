@@ -40,7 +40,6 @@ export function ListenView({
   showAll,
   onShowAll,
   startId,
-  split = false,
 }: {
   kommuneName: string;
   result: SocialListenResult;
@@ -49,15 +48,12 @@ export function ListenView({
   showAll: boolean;
   onShowAll: () => void;
   startId?: string | null;
-  split?: boolean;
 }) {
   const [tab, setTab] = useState<ListenTab>("all");
   const playable = result.listings.filter(isPlayableVideo);
   const linkedVideos = result.listings.filter((item) => isVideoPost(item) && !item.video);
   const posts = result.listings.filter((item) => !isVideoPost(item));
-  const editor = moduleOn("socialWatch") ? (
-    <SocialWatchEditor className={split ? undefined : "mb-5"} collapsible={split} />
-  ) : null;
+  const editor = moduleOn("socialWatch") ? <SocialWatchEditor className="mb-5" /> : null;
   const inArea = Math.max(found, result.listings.length);
   const countLine = listenCountDetail(matched, inArea, kommuneName);
   const allToggle = (
@@ -66,7 +62,7 @@ export function ListenView({
 
   if (!result.listings.length) {
     return (
-      <div className={split ? "min-h-0 flex-1 overflow-y-auto p-4" : "px-4 pb-24 md:px-6"}>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6">
         {editor}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <p className="text-sm leading-relaxed text-muted">{countLine}</p>
@@ -81,46 +77,8 @@ export function ListenView({
   const showPosts = tab !== "video" && posts.length > 0;
   const videoCount = playable.length + linkedVideos.length;
 
-  if (split) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="max-h-[min(50dvh,28rem)] shrink-0 overflow-y-auto border-b border-border px-4 py-3">
-          {editor}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <p className="text-sm text-muted">{countLine}</p>
-            {allToggle}
-          </div>
-        </div>
-        <div className="hunt-split min-h-0 flex-1">
-          <div className="hunt-detail-pane p-4">
-            {playable.length || linkedVideos.length ? (
-              <ReelFeed listings={[...playable, ...linkedVideos]} startId={startId} />
-            ) : (
-              <div className="hunt-empty-pane">
-                <p className="font-display text-xl text-fg">Ingen videoer i udsnittet</p>
-                <p className="mt-2 text-sm">Private opslag ligger i ruden til højre.</p>
-              </div>
-            )}
-          </div>
-          <div className="hunt-list-pane p-3">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted">Private opslag</p>
-            {posts.length ? (
-              <div className="flex flex-col gap-3">
-                {posts.map((listing) => (
-                  <SocialCard key={listing.id} listing={listing} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted">Ingen tekstopslag i området.</p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="px-4 pb-24 md:px-6">
+    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6">
       {editor}
       <div className="mb-4 flex max-w-2xl flex-wrap items-center gap-2">
         <p className="text-sm leading-relaxed text-muted">

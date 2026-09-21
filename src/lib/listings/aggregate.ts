@@ -1,4 +1,5 @@
 import { listingFromSocial } from "./listing-from-social";
+import { sortListings } from "./sort";
 import type { Listing, SearchFilters, SearchResult } from "./types";
 import { listingAllowedByTypes } from "./types";
 import type { SocialListing } from "./social";
@@ -50,16 +51,6 @@ export function dedupeListings(listings: Listing[]): Listing[] {
     best.set(listing.id, listing);
   }
   return [...best.values()];
-}
-
-function sortListings(listings: Listing[], filters: SearchFilters): Listing[] {
-  const dir = filters.sortAscending ? 1 : -1;
-  return [...listings].sort((a, b) => {
-    const av = a.price ?? Number.POSITIVE_INFINITY;
-    const bp = b.price ?? Number.POSITIVE_INFINITY;
-    if (av !== bp) return (av - bp) * (filters.sortBy === "price" ? dir : 1);
-    return (a.street || "").localeCompare(b.street || "", "da");
-  });
 }
 
 export function mergeSearchResults(

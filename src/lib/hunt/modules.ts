@@ -10,6 +10,8 @@ export const HUNT_MODULES = {
   listen: { enabled: true, label: "Lyt" },
   socialWatch: { enabled: true, label: "Følg konti og tags" },
   saved: { enabled: true, label: "Gemte huse" },
+  streetSearch: { enabled: true, label: "Søg på vej og adresse" },
+  keywords: { enabled: true, label: "Nøgleord i teksten" },
 } as const;
 
 export type HuntModuleId = keyof typeof HUNT_MODULES;

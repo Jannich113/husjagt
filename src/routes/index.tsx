@@ -11,7 +11,10 @@ import {
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): HuntSearch => parseHuntSearch(search),
-  loaderDeps: ({ search }: { search: HuntSearch }) => search,
+  loaderDeps: ({ search }: { search: HuntSearch }) => {
+    const { q: _q, view: _v, ...rest } = search;
+    return rest;
+  },
   loader: ({ deps }) => searchHousesFast({ data: filtersFromHunt(deps ?? {}) }),
   head: ({ match }) => {
     const filters = filtersFromHunt(match.search);

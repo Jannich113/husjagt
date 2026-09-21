@@ -40,6 +40,7 @@ export type HuntSearch = {
   kort?: string;
   bydel?: string;
   view?: string;
+  q?: string;
 };
 
 const TYPE_SLUG: Record<string, string> = {
@@ -117,6 +118,12 @@ const SORT_KEYS = new Set([
   "housingArea",
 ]);
 
+function parseSort(raw: string | undefined): SearchFilters["sortBy"] | null {
+  if (!raw) return null;
+  if (SORT_KEYS.has(raw)) return raw as SearchFilters["sortBy"];
+  return null;
+}
+
 export function parseHuntSearch(raw: Record<string, unknown> | null | undefined): HuntSearch {
   const out: HuntSearch = {};
   if (!raw || typeof raw !== "object") return out;
@@ -149,8 +156,8 @@ export function parseHuntSearch(raw: Record<string, unknown> | null | undefined)
   if (asFlag(raw.elevator)) out.elevator = 1;
   if (asFlag(raw.fald) || asFlag(raw.priceDropOnly)) out.fald = 1;
   if (asFlag(raw.ny) || asFlag(raw.freshOnly)) out.ny = 1;
-  const sort = asString(raw.sort);
-  if (sort && SORT_KEYS.has(sort)) out.sort = sort;
+  const sort = parseSort(asString(raw.sort));
+  if (sort) out.sort = sort;
   if (asFlag(raw.desc) || raw.asc === 0 || raw.asc === "0" || raw.asc === false) {
     out.desc = 1;
   }
@@ -160,6 +167,8 @@ export function parseHuntSearch(raw: Record<string, unknown> | null | undefined)
   if (districts) out.bydel = districts;
   const view = asString(raw.view);
   if (view && VIEW_IN[view]) out.view = VIEW_OUT[VIEW_IN[view]] ?? view;
+  const q = asString(raw.q) ?? asString(raw.street);
+  if (q) out.q = q.slice(0, 80);
   return out;
 }
 
@@ -192,7 +201,7 @@ export function filtersFromHunt(hunt: HuntSearch | null | undefined): SearchFilt
     elevator: src.elevator === 1,
     priceDropOnly: src.fald === 1,
     freshOnly: src.ny === 1,
-    sortBy: src.sort && SORT_KEYS.has(src.sort) ? (src.sort as SearchFilters["sortBy"]) : "price",
+    sortBy: parseSort(src.sort) ?? "price",
     sortAscending: src.desc !== 1,
     boxes: parseBoxes(src.kort),
     districts: parseDistricts(src.bydel),
@@ -207,7 +216,7 @@ export function viewFromHunt(hunt: HuntSearch | null | undefined): HuntView {
 export function huntFromFilters(
   filters: SearchFilters,
   view: HuntView = "list",
-  opts: { explicit?: boolean } = {},
+  opts: { explicit?: boolean; q?: string } = {},
 ): HuntSearch {
   const out: HuntSearch = {};
   const explicit = opts.explicit === true;
@@ -247,13 +256,15 @@ export function huntFromFilters(
   if (filters.districts?.length) out.bydel = filters.districts.join(",");
   const viewSlug = VIEW_OUT[view];
   if (viewSlug) out.view = viewSlug;
+  const q = (opts.q ?? "").trim().slice(0, 80);
+  if (q) out.q = q;
   return out;
 }
 
 export function huntPath(
   filters: SearchFilters,
   view: HuntView = "list",
-  opts: { explicit?: boolean } = {},
+  opts: { explicit?: boolean; q?: string } = {},
 ): string {
   const hunt = huntFromFilters(filters, view, opts);
   const parts: string[] = [];
@@ -344,13 +355,14 @@ export function appShareCopy() {
   };
 }
 
-export function huntShareCopy(filters: SearchFilters, view: HuntView = "list") {
+export function huntShareCopy(filters: SearchFilters, view: HuntView = "list", opts: { q?: string } = {}) {
   const kommune = kommuneBySlug(filters.municipality)?.name ?? "Danmark";
   const types = filters.types.map(typeLabel).join(", ");
   const extras = extraFilterLabels(filters);
   const bits = [
     types,
     filters.priceMax != null ? `max ${formatMio(filters.priceMax)}` : null,
+    opts.q?.trim() || null,
     ...extras,
   ].filter((bit): bit is string => Boolean(bit));
   const viewBit =
@@ -358,7 +370,7 @@ export function huntShareCopy(filters: SearchFilters, view: HuntView = "list") {
   return {
     title: `Husjagt i ${kommune}`,
     text: [viewBit, ...bits].filter(Boolean).join(" · "),
-    url: absoluteUrl(huntPath(filters, view, { explicit: true })),
+    url: absoluteUrl(huntPath(filters, view, { explicit: true, q: opts.q })),
   };
 }
 

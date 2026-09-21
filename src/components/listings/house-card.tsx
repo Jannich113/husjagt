@@ -1,9 +1,12 @@
 import { Heart, MapPin } from "lucide-react";
+import type { ReactNode } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { useFavorites } from "@/lib/listings/favorites";
 import { formatDays, formatKr, formatM2, formatRooms, sourceLabel, typeLabel } from "@/lib/listings/format";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
+import { matchedKeywords, useKeywords } from "@/lib/listings/keywords";
+import { moduleOn } from "@/lib/hunt/modules";
 import { useSeen } from "@/lib/listings/seen";
 import type { Listing } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
@@ -70,6 +73,8 @@ export function HouseCard({
   const fresh = listingFreshness(listing, firstSeenAt);
   const unread = unseen && !fresh;
   const drop = listing.priceChange != null && listing.priceChange < -0.5;
+  const keywordWords = useKeywords((s) => s.words);
+  const keywordHits = moduleOn("keywords") ? matchedKeywords(listing, keywordWords) : [];
 
   if (layout === "row") {
     return (
@@ -110,6 +115,13 @@ export function HouseCard({
                 {listing.zip} {listing.city} · {formatM2(listing.area)}
                 {listing.source !== "boligsiden" ? ` · ${sourceLabel(listing)}` : ""}
               </p>
+              {keywordHits.length ? (
+                <p className="mt-1 flex flex-wrap gap-1">
+                  {keywordHits.slice(0, 3).map((word) => (
+                    <MetaPill key={word}>{word}</MetaPill>
+                  ))}
+                </p>
+              ) : null}
             </div>
           </button>
           <button
@@ -187,6 +199,13 @@ export function HouseCard({
             {sourceLabel(listing)}
             {listing.days != null ? ` · ${formatDays(listing.days)} på markedet` : ""}
           </p>
+          {keywordHits.length ? (
+            <p className="mt-2 flex flex-wrap gap-1">
+              {keywordHits.slice(0, 4).map((word) => (
+                <MetaPill key={word}>{word}</MetaPill>
+              ))}
+            </p>
+          ) : null}
         </button>
         <button
           type="button"
@@ -201,5 +220,13 @@ export function HouseCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function MetaPill({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-border bg-sunken px-2 py-0.5 text-xs font-medium text-muted">
+      {children}
+    </span>
   );
 }
