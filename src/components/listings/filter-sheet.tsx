@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { PlacePicker } from "@/components/listings/place-picker";
 import { FilterArea } from "@/components/listings/filter-area";
 import { FilterChip as Chip } from "@/components/listings/filter-chip";
+import { KeywordWatch } from "@/components/listings/keyword-watch";
 import { formatMio } from "@/lib/listings/format";
+import { moduleOn } from "@/lib/hunt/modules";
 import type { District } from "@/lib/listings/districts";
 import {
   DEFAULT_FILTERS,
@@ -181,6 +183,8 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
               </div>
               <p className="mt-1.5 text-xs text-faint">Ny i dag og inden for 7 dage på markedet — ikke det samme som uåbnede.</p>
             </section>
+
+            {moduleOn("keywords") ? <KeywordWatch /> : null}
 
             <section className="rounded-xl border border-border bg-surface">
               <button

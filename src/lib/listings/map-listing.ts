@@ -79,6 +79,8 @@ export function mapListing(raw: unknown, source: Listing["source"] = "boligsiden
     slugAddress: str(rec.slugAddress) ?? str(address.slugAddress) ?? "",
     source,
     caseUrl: str(rec.caseUrl),
+    descriptionTitle: str(rec.descriptionTitle),
+    descriptionBody: str(rec.descriptionBody),
   };
 }
 

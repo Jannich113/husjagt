@@ -1,9 +1,11 @@
-import { ArrowLeft, ExternalLink, Heart, MapPin } from "lucide-react";
+import { ArrowLeft, Crosshair, ExternalLink, Heart, MapPin } from "lucide-react";
 import { useMemo } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
+import { HighlightText } from "@/components/listings/highlight-text";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
 import { Button } from "@/components/ui/button";
+import { moduleOn } from "@/lib/hunt/modules";
 import { useFavorites } from "@/lib/listings/favorites";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import {
@@ -15,7 +17,9 @@ import {
   formatRooms,
   typeLabel,
 } from "@/lib/listings/format";
+import { matchedKeywords, useKeywords } from "@/lib/listings/keywords";
 import { listingShareCopy } from "@/lib/listings/share";
+import { isSimilarListing, usePreference } from "@/lib/listings/similar";
 import { externalLinkProps } from "@/lib/pwa/outbound";
 import type { Listing, ListingDetail } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
@@ -39,6 +43,13 @@ export function HouseDetail({
   const share = useMemo(() => listingShareCopy(listing), [listing]);
   const href = listing.caseUrl || boligsidenUrl(listing.slugAddress || listing.slug);
   const photos = listing.images?.length ? listing.images : listing.image ? [listing.image] : [];
+  const keywordWords = useKeywords((s) => s.words);
+  const keywordHits = moduleOn("keywords") ? matchedKeywords(listing, keywordWords) : [];
+  const preference = usePreference((s) => s.listing);
+  const setPreference = usePreference((s) => s.setListing);
+  const clearPreference = usePreference((s) => s.clear);
+  const isPref = moduleOn("preference") && preference?.id === listing.id;
+  const similar = moduleOn("preference") && isSimilarListing(listing, preference);
 
   return (
     <main className={cn("mx-auto bg-bg pb-16", embedded ? "max-w-none" : "min-h-dvh max-w-3xl")}>
@@ -61,6 +72,20 @@ export function HouseDetail({
           </button>
         )}
         <div className="flex items-center gap-2">
+          {moduleOn("preference") ? (
+            <button
+              type="button"
+              onClick={() => (isPref ? clearPreference() : setPreference(listing))}
+              className={cn(
+                "flex size-11 items-center justify-center rounded-full border border-border",
+                isPref ? "bg-primary text-primary-fg" : "bg-surface text-muted",
+              )}
+              aria-label={isPref ? "Fjern som referencehus" : "Brug som referencehus"}
+              title={isPref ? "Fjern som referencehus" : "Brug som referencehus"}
+            >
+              <Crosshair className="size-5" />
+            </button>
+          ) : null}
           <ShareButton
             title={share.title}
             text={share.text}
@@ -124,14 +149,35 @@ export function HouseDetail({
           </div>
         </dl>
 
+        {isPref || similar || keywordHits.length ? (
+          <p className="mt-3 flex flex-wrap gap-1.5">
+            {isPref ? (
+              <span className="rounded-full border border-primary bg-primary px-2.5 py-1 text-xs font-medium text-primary-fg">
+                Dit referencehus
+              </span>
+            ) : similar ? (
+              <span className="rounded-full border border-border bg-sunken px-2.5 py-1 text-xs font-medium text-fg">
+                Ligner dit hus
+              </span>
+            ) : null}
+            {keywordHits.map((word) => (
+              <span key={word} className="rounded-full border border-border bg-sunken px-2.5 py-1 text-xs font-medium">
+                {word}
+              </span>
+            ))}
+          </p>
+        ) : null}
+
         {listing.descriptionTitle || listing.descriptionBody ? (
           <section className="mt-8">
             {listing.descriptionTitle ? (
-              <h2 className="font-display text-2xl">{listing.descriptionTitle}</h2>
+              <h2 className="font-display text-2xl">
+                <HighlightText text={listing.descriptionTitle} words={keywordWords} />
+              </h2>
             ) : null}
             {listing.descriptionBody ? (
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">
-                {listing.descriptionBody}
+                <HighlightText text={listing.descriptionBody} words={keywordWords} />
               </p>
             ) : null}
           </section>
@@ -144,6 +190,17 @@ export function HouseDetail({
         </section>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          {moduleOn("preference") ? (
+            <Button
+              type="button"
+              variant={isPref ? "primary" : "outline"}
+              className="flex-1"
+              onClick={() => (isPref ? clearPreference() : setPreference(listing))}
+            >
+              <Crosshair className="size-4" />
+              {isPref ? "Fjern referencehus" : "Brug som referencehus"}
+            </Button>
+          ) : null}
           <Button asChild className="flex-1">
             <a {...externalLinkProps(href)}>
               Se original opslag

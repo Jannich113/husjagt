@@ -69,6 +69,17 @@ describe("hunt URL codec", () => {
     assert.equal(filtersFromHunt({}).freshOnly, false);
   });
 
+  it("roundtrips street query and mest-lig sort", () => {
+    const hunt = huntFromFilters({ ...DEFAULT_FILTERS, sortBy: "similarity", sortAscending: false }, "list", {
+      q: "Roskildevej",
+    });
+    assert.equal(hunt.q, "Roskildevej");
+    assert.equal(hunt.sort, "lig");
+    const parsed = parseHuntSearch({ q: "roskildevej 12", sort: "lig" });
+    assert.equal(parsed.q, "roskildevej 12");
+    assert.equal(filtersFromHunt(parsed).sortBy, "similarity");
+  });
+
   it("accepts Danish type aliases and boolean flags from a raw URL", () => {
     const hunt = parseHuntSearch({
       k: "Odense",

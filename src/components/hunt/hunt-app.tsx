@@ -1,10 +1,12 @@
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { HouseDetail } from "@/components/listings/house-detail";
 import { NavRail } from "@/components/listings/nav-rail";
+import { visibleListings } from "@/lib/hunt/visible";
 import { useFavorites } from "@/lib/listings/favorites";
-import { listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
+import { useFirstSeen } from "@/lib/listings/fresh";
+import { useKeywords } from "@/lib/listings/keywords";
 import { placeLabel } from "@/lib/listings/place";
 import { districtsForKommune, rememberDistricts, type District } from "@/lib/listings/districts";
 import { extraFilterLabels, formatKr, typeLabel } from "@/lib/listings/format";
@@ -20,6 +22,7 @@ import {
   type HuntSearch,
   type HuntView,
 } from "@/lib/listings/share";
+import { usePreference } from "@/lib/listings/similar";
 import { useSeen } from "@/lib/listings/seen";
 import {
   displayedListenListings,
@@ -52,9 +55,11 @@ function storedView(fallback: HuntView): HuntView {
 }
 
 export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchResult }) {
-  const huntKey = JSON.stringify(hunt);
+  const filterHunt = { ...hunt, q: undefined, view: undefined };
+  const huntKey = JSON.stringify(filterHunt);
   const navigate = useNavigate({ from: "/" });
   const filters = useMemo(() => filtersFromHunt(JSON.parse(huntKey) as HuntSearch), [huntKey]);
+  const streetQuery = hunt.q ?? "";
   const [view, setView] = useState<HuntView>(() => storedView(viewFromHunt(hunt)));
   const [openListing, setOpenListing] = useState<Listing | null>(null);
   const [result, setResult] = useState<SearchResult>(initial);
@@ -76,11 +81,16 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const watchReady = useSocialWatch((s) => s.ready);
   const socialAccounts = useSocialWatch((s) => s.accounts);
   const socialTags = useSocialWatch((s) => s.tags);
+  const hydrateKeywords = useKeywords((s) => s.hydrate);
+  const keywordWords = useKeywords((s) => s.words);
+  const keywordMode = useKeywords((s) => s.mode);
+  const hydratePreference = usePreference((s) => s.hydrate);
+  const preference = usePreference((s) => s.listing);
   const savedItems = useMemo(
     () => savedIds.map((id) => savedMap[id]).filter((row): row is Listing => Boolean(row)),
     [savedIds, savedMap],
   );
-  const share = useMemo(() => huntShareCopy(filters, view), [filters, view]);
+  const share = useMemo(() => huntShareCopy(filters, view, { q: streetQuery }), [filters, view, streetQuery]);
   const size = useSizeClass();
   const split = size !== "compact";
   const wasSplit = useRef(split);
@@ -90,9 +100,11 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     hydrateSeen();
     hydrateFirstSeen();
     hydrateWatch();
+    hydrateKeywords();
+    hydratePreference();
     document.body.style.removeProperty("pointer-events");
     document.body.style.removeProperty("overflow");
-  }, [hydrate, hydrateSeen, hydrateFirstSeen, hydrateWatch]);
+  }, [hydrate, hydrateSeen, hydrateFirstSeen, hydrateWatch, hydrateKeywords, hydratePreference]);
 
   useEffect(() => {
     rememberHunt(hunt);
@@ -165,13 +177,20 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   }, [filters, watchReady, socialAccounts, socialTags]);
 
   function apply(next: SearchFilters) {
-    void navigate({ search: huntFromFilters(next, view) });
+    void navigate({ search: huntFromFilters(next, view, { q: streetQuery }) });
   }
 
   function applyArea(next: { boxes: SearchFilters["boxes"]; districts: SearchFilters["districts"] }) {
-    void navigate({ search: huntFromFilters({ ...filters, ...next, page: 1 }, "map") });
+    void navigate({ search: huntFromFilters({ ...filters, ...next, page: 1 }, "map", { q: streetQuery }) });
     goView("map");
   }
+
+  const applyStreet = useCallback(
+    (next: string) => {
+      void navigate({ search: huntFromFilters(filters, view, { q: next }) });
+    },
+    [filters, view, navigate],
+  );
 
   function goView(next: HuntView, focus: string | null = null) {
     setReelFocus(focus);
@@ -189,10 +208,20 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   }
 
   const pool = view === "saved" ? savedItems : result.listings;
-  const listings = useMemo(() => {
-    if (!filters.freshOnly) return pool;
-    return pool.filter((row) => listingFreshness(row, firstSeenAt[row.id]) != null);
-  }, [filters.freshOnly, pool, firstSeenAt]);
+  const listings = useMemo(
+    () =>
+      visibleListings({
+        pool,
+        freshOnly: filters.freshOnly,
+        firstSeenAt,
+        streetQuery,
+        keywords: keywordWords,
+        keywordMode,
+        preference,
+        sortBy: filters.sortBy,
+      }),
+    [pool, filters.freshOnly, filters.sortBy, firstSeenAt, streetQuery, keywordWords, keywordMode, preference],
+  );
   const kommune = kommuneBySlug(filters.municipality);
   const typeSummary = useMemo(() => filters.types.map(typeLabel).join(", "), [filters.types]);
   const extras = useMemo(() => extraFilterLabels(filters), [filters]);
@@ -211,7 +240,9 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         ? listenAll
           ? `${listenShown.length} opslag`
           : listenCountLabel(listenMatched.length, listenFound)
-        : `${filters.freshOnly ? listings.length : result.totalHits} boliger`;
+        : listings.length !== (filters.freshOnly ? pool.length : result.totalHits) || streetQuery || keywordWords.length
+          ? `${listings.length} af ${filters.freshOnly ? pool.length : result.totalHits} boliger`
+          : `${filters.freshOnly ? listings.length : result.totalHits} boliger`;
 
   useEffect(() => {
     const missing = result.listings.filter((row) => row.days == null).map((row) => row.id);
@@ -266,9 +297,11 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
           listenFound={listenFound}
           listenAll={listenAll}
           resultHits={result.totalHits}
+          streetQuery={streetQuery}
           onApply={apply}
           onView={goView}
           onToggleListenAll={() => setListenAll((value) => !value)}
+          onStreetQuery={applyStreet}
         />
 
         {split ? null : (

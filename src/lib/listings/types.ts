@@ -45,6 +45,7 @@ export const SORT_OPTIONS = [
   { id: "perAreaPrice", label: "Lavest m²-pris", ascending: true },
   { id: "monthlyExpense", label: "Lavest ejerudgift", ascending: true },
   { id: "lotArea", label: "Størst grund", ascending: false },
+  { id: "similarity", label: "Mest lig", ascending: false },
 ] as const;
 
 export type SortKey =
@@ -54,7 +55,8 @@ export type SortKey =
   | "perAreaPrice"
   | "monthlyExpense"
   | "lotArea"
-  | "housingArea";
+  | "housingArea"
+  | "similarity";
 
 export const ENERGY_LABELS = ["A", "B", "C", "D", "E", "F", "G"] as const;
 export type EnergyLabel = (typeof ENERGY_LABELS)[number];
@@ -212,6 +214,8 @@ export type Listing = {
   slugAddress: string;
   source: ListingSource;
   caseUrl: string | null;
+  descriptionTitle?: string | null;
+  descriptionBody?: string | null;
 };
 
 export type ListingDetail = Listing & {

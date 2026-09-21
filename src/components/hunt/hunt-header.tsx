@@ -1,12 +1,15 @@
-import { Heart, LayoutGrid, Map as MapIcon, Radio } from "lucide-react";
+import { Heart, LayoutGrid, Map as MapIcon, Radio, X } from "lucide-react";
+import { useEffect } from "react";
 import { FilterSheet } from "@/components/listings/filter-sheet";
 import { PlacePicker } from "@/components/listings/place-picker";
 import { ShareButton } from "@/components/listings/share-button";
+import { StreetSearch } from "@/components/listings/street-search";
 import { moduleOn } from "@/lib/hunt/modules";
 import type { District } from "@/lib/listings/districts";
 import { placeLabel } from "@/lib/listings/place";
 import { formatMio } from "@/lib/listings/format";
 import type { HuntView } from "@/lib/listings/share";
+import { usePreference } from "@/lib/listings/similar";
 import type { SearchFilters } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 import { ListenAllButton } from "./listen-view";
@@ -26,9 +29,11 @@ export function HuntHeader({
   listenFound,
   listenAll,
   resultHits,
+  streetQuery,
   onApply,
   onView,
   onToggleListenAll,
+  onStreetQuery,
 }: {
   split: boolean;
   view: HuntView;
@@ -43,9 +48,11 @@ export function HuntHeader({
   listenFound: number;
   listenAll: boolean;
   resultHits: number;
+  streetQuery: string;
   onApply: (next: SearchFilters) => void;
   onView: (next: HuntView) => void;
   onToggleListenAll: () => void;
+  onStreetQuery: (next: string) => void;
 }) {
   return (
     <header className={cn("border-b border-border bg-bg px-4 py-2.5", !split && "sticky top-0 z-50 bg-bg/95 backdrop-blur md:px-6 md:py-3")}>
@@ -77,6 +84,12 @@ export function HuntHeader({
           <PlacePicker value={filters} onChange={onApply} />
         </div>
       ) : null}
+      {moduleOn("streetSearch") && view !== "listen" ? (
+        <div className="max-w-md">
+          <StreetSearch value={streetQuery} onChange={onStreetQuery} />
+        </div>
+      ) : null}
+      {moduleOn("preference") ? <PreferenceChip /> : null}
       <p className="mt-2 truncate text-sm text-muted">
         {placeLabel(filters)} · {typeSummary} · max {formatMio(filters.priceMax)}
         {split ? ` · ${countLabel}` : ""}
@@ -117,5 +130,30 @@ export function HuntHeader({
         </div>
       )}
     </header>
+  );
+}
+
+function PreferenceChip() {
+  const hydrate = usePreference((s) => s.hydrate);
+  const listing = usePreference((s) => s.listing);
+  const clear = usePreference((s) => s.clear);
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+  if (!listing) return null;
+  return (
+    <div className="mt-2 flex max-w-md items-center gap-2">
+      <span className="min-w-0 flex-1 truncate rounded-full border border-border bg-sunken px-3 py-1.5 text-xs text-fg">
+        Reference: {listing.street}
+      </span>
+      <button
+        type="button"
+        onClick={() => clear()}
+        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted"
+        aria-label="Fjern referencehus"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
   );
 }
