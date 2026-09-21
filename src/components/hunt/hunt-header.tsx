@@ -1,4 +1,5 @@
-import { Heart, LayoutGrid, Map as MapIcon, Radio } from "lucide-react";
+import { Heart, LayoutGrid, Map as MapIcon, Radio, ChevronDown, MapPin } from "lucide-react";
+import { useState } from "react";
 import { FilterSheet } from "@/components/listings/filter-sheet";
 import { PlacePicker } from "@/components/listings/place-picker";
 import { ShareButton } from "@/components/listings/share-button";
@@ -7,9 +8,9 @@ import { StreetSearch } from "@/components/listings/street-search";
 import { moduleOn } from "@/lib/hunt/modules";
 import type { District } from "@/lib/listings/districts";
 import { placeLabel } from "@/lib/listings/place";
-import { formatMio } from "@/lib/listings/format";
 import type { HuntView } from "@/lib/listings/share";
 import type { SearchFilters } from "@/lib/listings/types";
+import { cn } from "@/lib/utils";
 import { ListenAllButton } from "./listen-view";
 import { ViewTab } from "./view-tab";
 
@@ -18,7 +19,6 @@ export function HuntHeader({
   filters,
   share,
   countLabel,
-  typeSummary,
   extras,
   sources,
   catalog,
@@ -50,6 +50,10 @@ export function HuntHeader({
   onToggleListenAll: () => void;
   onStreetQuery: (next: string) => void;
 }) {
+  const [areaOpen, setAreaOpen] = useState(false);
+  const areaBits = [placeLabel(filters), streetQuery || null, extras[0] ?? null].filter(Boolean);
+  const areaLabel = areaBits.join(" · ");
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/95 px-4 py-2.5 backdrop-blur md:px-6 md:py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -74,27 +78,46 @@ export function HuntHeader({
           />
         </div>
       </div>
-      {moduleOn("placePicker") ? (
+
+      {moduleOn("placePicker") || (moduleOn("streetSearch") && view !== "listen") ? (
         <div className="mt-3">
-          <PlacePicker value={filters} onChange={onApply} />
+          <button
+            type="button"
+            aria-expanded={areaOpen}
+            onClick={() => setAreaOpen((open) => !open)}
+            className="flex h-11 w-full items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-left"
+          >
+            <MapPin className="size-4 shrink-0 text-muted" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{areaLabel}</span>
+            {extras.length > 1 ? (
+              <span className="rounded-full bg-sunken px-2 py-0.5 text-xs text-muted">+{extras.length - 1}</span>
+            ) : null}
+            <ChevronDown className={cn("size-4 shrink-0 text-muted transition-transform", areaOpen && "rotate-180")} />
+          </button>
+          {areaOpen ? (
+            <div className="mt-3 space-y-3">
+              {moduleOn("placePicker") ? <PlacePicker value={filters} onChange={onApply} compact /> : null}
+              {moduleOn("streetSearch") && view !== "listen" ? (
+                <StreetSearch value={streetQuery} onChange={onStreetQuery} />
+              ) : null}
+              {extras.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {extras.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {sources.length ? <p className="truncate text-xs text-faint">{sources.join(" · ")}</p> : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
-      {moduleOn("streetSearch") && view !== "listen" ? (
-        <StreetSearch value={streetQuery} onChange={onStreetQuery} />
-      ) : null}
-      <p className="mt-2 text-sm text-muted">
-        {placeLabel(filters)} · {typeSummary} · max {formatMio(filters.priceMax)}
-      </p>
-      {sources.length ? <p className="mt-1 truncate text-xs text-faint">{sources.join(" · ")}</p> : null}
-      {extras.length ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {extras.map((label) => (
-            <span key={label} className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted">
-              {label}
-            </span>
-          ))}
-        </div>
-      ) : null}
+
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap rounded-full border border-border bg-surface p-1">
           <ViewTab active={view === "list"} onClick={() => onView("list")} icon={<LayoutGrid className="size-4" />} label="Liste" />
