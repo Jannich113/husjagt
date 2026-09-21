@@ -1,16 +1,13 @@
 import { LoaderCircle } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { HouseDetail } from "@/components/listings/house-detail";
-import { NavRail } from "@/components/listings/nav-rail";
 import { visibleListings } from "@/lib/hunt/visible";
 import { useFavorites } from "@/lib/listings/favorites";
 import { useFirstSeen } from "@/lib/listings/fresh";
 import { useKeywords } from "@/lib/listings/keywords";
 import { placeLabel } from "@/lib/listings/place";
 import { districtsForKommune, rememberDistricts, type District } from "@/lib/listings/districts";
-import { extraFilterLabels, formatKr, typeLabel } from "@/lib/listings/format";
-import { useSizeClass } from "@/lib/listings/layout";
+import { extraFilterLabels, typeLabel } from "@/lib/listings/format";
 import { listenSocial, loadKommuneDistricts, searchHouses } from "@/lib/listings/search";
 import { loadOfflineSearch, saveOfflineSearch } from "@/lib/listings/offline-cache";
 import {
@@ -26,19 +23,14 @@ import { useSeen } from "@/lib/listings/seen";
 import {
   displayedListenListings,
   isPlayableVideo,
-  isVideoPost,
-  listenCountDetail,
   listenCountLabel,
   withLocalVideos,
   type SocialListenResult,
 } from "@/lib/listings/social";
 import { useSocialWatch } from "@/lib/listings/social-watch";
 import type { Listing, SearchFilters, SearchResult } from "@/lib/listings/types";
-import { kommuneBySlug } from "@/lib/listings/kommuner";
-import { cn } from "@/lib/utils";
 import { HuntBody } from "./hunt-body";
 import { HuntHeader } from "./hunt-header";
-import { ListenAllButton } from "./listen-view";
 
 const VIEW_KEY = "husjagt:view";
 
@@ -88,9 +80,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     [savedIds, savedMap],
   );
   const share = useMemo(() => huntShareCopy(filters, view, { q: streetQuery }), [filters, view, streetQuery]);
-  const size = useSizeClass();
-  const split = size !== "compact";
-  const wasSplit = useRef(split);
 
   useEffect(() => {
     hydrate();
@@ -216,7 +205,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       }),
     [pool, filters.freshOnly, firstSeenAt, streetQuery, keywordWords, keywordMode],
   );
-  const kommune = kommuneBySlug(filters.municipality);
   const typeSummary = useMemo(() => filters.types.map(typeLabel).join(", "), [filters.types]);
   const extras = useMemo(() => extraFilterLabels(filters), [filters]);
   const listen = useMemo(() => withLocalVideos(social, filters), [social, filters]);
@@ -224,8 +212,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const listenFound = Math.max(listen.found, listen.all?.length ?? 0, listenMatched.length);
   const listenShown = useMemo(() => displayedListenListings(listen, listenAll), [listen, listenAll]);
   const listenView = useMemo(() => ({ ...listen, listings: listenShown }), [listen, listenShown]);
-  const listenCount = listenAll ? listenShown.length : listenMatched.length;
-  const videoCount = listenView.listings.filter(isVideoPost).length;
   const playableVideos = useMemo(() => listenView.listings.filter(isPlayableVideo), [listenView.listings]);
   const countLabel =
     view === "saved"
@@ -247,19 +233,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     setListenAll(false);
   }, [filters.municipality]);
 
-  useEffect(() => {
-    if (wasSplit.current && !split) setOpenListing(null);
-    wasSplit.current = split;
-  }, [split]);
-
-  useEffect(() => {
-    if (!split || (view !== "list" && view !== "saved" && view !== "map")) return;
-    setOpenListing((current) => {
-      if (current && listings.some((row) => row.id === current.id)) return current;
-      return listings[0] ?? null;
-    });
-  }, [split, view, listings]);
-
   function openHouseId(id: string) {
     const found = listings.find((row) => row.id === id) ?? savedItems.find((row) => row.id === id);
     if (found) {
@@ -269,110 +242,55 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   }
 
   return (
-    <div className={cn(split ? "hunt-app-split" : "mx-auto min-h-dvh max-w-6xl")} data-size={size}>
-      {split ? <NavRail view={view} savedCount={savedItems.length} onView={goView} /> : null}
-      {!split && openListing ? (
-        <div className="absolute inset-0 z-[80] overflow-y-auto bg-bg">
-          <HouseDetail listing={openListing} onBack={() => setOpenListing(null)} />
+    <div className="hunt-shell">
+      <HuntHeader
+        view={view}
+        filters={filters}
+        share={share}
+        countLabel={countLabel}
+        typeSummary={typeSummary}
+        extras={extras}
+        sources={result.sources}
+        catalog={areaDistricts}
+        listenMatched={listenMatched.length}
+        listenFound={listenFound}
+        listenAll={listenAll}
+        resultHits={result.totalHits}
+        streetQuery={streetQuery}
+        onApply={apply}
+        onView={goView}
+        onToggleListenAll={() => setListenAll((value) => !value)}
+        onStreetQuery={applyStreet}
+      />
+
+      {busy || (view === "listen" && !socialReady && !playableVideos.length) ? (
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+          <LoaderCircle className="size-4 animate-spin" />
+          {view === "listen" ? "Lytter efter opslag…" : "Henter boliger…"}
         </div>
       ) : null}
-      <div className={split ? "hunt-main" : undefined}>
-        <HuntHeader
-          split={split}
+
+      <div className="hunt-body">
+        <HuntBody
           view={view}
+          listings={listings}
+          openListing={openListing}
           filters={filters}
-          share={share}
-          countLabel={countLabel}
-          typeSummary={typeSummary}
-          extras={extras}
-          sources={result.sources}
           catalog={areaDistricts}
+          kommuneName={placeLabel(filters)}
+          listenView={listenView}
           listenMatched={listenMatched.length}
           listenFound={listenFound}
           listenAll={listenAll}
-          resultHits={result.totalHits}
-          streetQuery={streetQuery}
-          onApply={apply}
+          reelFocus={reelFocus}
+          playableVideos={playableVideos}
+          onOpenHouse={openHouse}
+          onOpenHouseId={openHouseId}
+          onCloseHouse={() => setOpenListing(null)}
+          onAreaChange={applyArea}
           onView={goView}
           onToggleListenAll={() => setListenAll((value) => !value)}
-          onStreetQuery={applyStreet}
         />
-
-        {split ? null : (
-          <div className="flex flex-wrap items-center gap-2 px-4 py-3 text-xs text-faint md:px-6">
-            {view === "listen" ? (
-              <>
-                <span className="rounded-full border border-border bg-surface px-2.5 py-1">
-                  {listen.live ? "Live lyt i området" : listen.sources[0] ?? "Ingen kilder"}
-                </span>
-                <span>{listenCountDetail(listenMatched.length, listenFound, kommune?.name ?? "området")}</span>
-                <ListenAllButton
-                  showAll={listenAll}
-                  matched={listenMatched.length}
-                  found={listenFound}
-                  onToggle={() => setListenAll((value) => !value)}
-                />
-                {videoCount ? <span>{videoCount} videoer</span> : null}
-              </>
-            ) : (
-              <>
-                <span className="rounded-full border border-border bg-surface px-2.5 py-1">
-                  {result.live ? `Live fra ${result.sources.length || 1} kilder` : result.source}
-                </span>
-                <span>
-                  {result.sources.length ? result.sources.join(" · ") : "Boligsiden · Boliga · GulogGratis · DBA"}
-                </span>
-                {playableVideos.length ? (
-                  <button
-                    type="button"
-                    onClick={() => goView("listen")}
-                    className="rounded-full border border-border bg-surface px-2.5 py-1"
-                  >
-                    {playableVideos.length} {playableVideos.length === 1 ? "video" : "videoer"} på Instagram og TikTok
-                  </button>
-                ) : null}
-              </>
-            )}
-          </div>
-        )}
-
-        {busy || (view === "listen" && !socialReady && !playableVideos.length) ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
-            <LoaderCircle className="size-4 animate-spin" />
-            {view === "listen" ? "Lytter efter opslag…" : "Henter boliger…"}
-          </div>
-        ) : null}
-
-        <div className={split ? "hunt-body" : undefined}>
-          <HuntBody
-            view={view}
-            split={split}
-            listings={listings}
-            openListing={openListing}
-            filters={filters}
-            catalog={areaDistricts}
-            kommuneName={placeLabel(filters)}
-            listenView={listenView}
-            listenMatched={listenMatched.length}
-            listenFound={listenFound}
-            listenAll={listenAll}
-            reelFocus={reelFocus}
-            playableVideos={playableVideos}
-            onOpenHouse={openHouse}
-            onOpenHouseId={openHouseId}
-            onCloseHouse={() => setOpenListing(null)}
-            onAreaChange={applyArea}
-            onView={goView}
-            onToggleListenAll={() => setListenAll((value) => !value)}
-          />
-        </div>
-
-        {!split && view === "list" && result.listings[0] ? (
-          <p className="px-4 pb-10 text-xs text-faint md:px-6">
-            Laveste pris i udsnittet: {formatKr(result.listings[0].price)}. Data aggregeres fra Boligsiden, som samler
-            salgsopstillinger fra de danske mæglerkæder.
-          </p>
-        ) : null}
       </div>
     </div>
   );

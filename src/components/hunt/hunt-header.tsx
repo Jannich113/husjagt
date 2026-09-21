@@ -10,12 +10,10 @@ import { placeLabel } from "@/lib/listings/place";
 import { formatMio } from "@/lib/listings/format";
 import type { HuntView } from "@/lib/listings/share";
 import type { SearchFilters } from "@/lib/listings/types";
-import { cn } from "@/lib/utils";
 import { ListenAllButton } from "./listen-view";
 import { ViewTab } from "./view-tab";
 
 export function HuntHeader({
-  split,
   view,
   filters,
   share,
@@ -34,7 +32,6 @@ export function HuntHeader({
   onToggleListenAll,
   onStreetQuery,
 }: {
-  split: boolean;
   view: HuntView;
   filters: SearchFilters;
   share: { title: string; text: string; url: string };
@@ -54,15 +51,13 @@ export function HuntHeader({
   onStreetQuery: (next: string) => void;
 }) {
   return (
-    <header className={cn("border-b border-border bg-bg px-4 py-2.5", !split && "sticky top-0 z-50 bg-bg/95 backdrop-blur md:px-6 md:py-3")}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          {split ? null : (
-            <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">Danmark</p>
-          )}
-          <h1 className={cn("font-display leading-none", split ? "text-2xl" : "text-3xl")}>Husjagt</h1>
+    <header className="sticky top-0 z-50 border-b border-border bg-bg/95 px-4 py-2.5 backdrop-blur md:px-6 md:py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">Danmark</p>
+          <h1 className="font-display text-3xl leading-none">Husjagt</h1>
         </div>
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ShareButton
             title={share.title}
             text={share.text}
@@ -80,22 +75,17 @@ export function HuntHeader({
         </div>
       </div>
       {moduleOn("placePicker") ? (
-        <div className="mt-2 max-w-md">
+        <div className="mt-3">
           <PlacePicker value={filters} onChange={onApply} />
         </div>
       ) : null}
       {moduleOn("streetSearch") && view !== "listen" ? (
-        <div className="max-w-md">
-          <StreetSearch value={streetQuery} onChange={onStreetQuery} />
-        </div>
+        <StreetSearch value={streetQuery} onChange={onStreetQuery} />
       ) : null}
-      <p className="mt-2 truncate text-sm text-muted">
+      <p className="mt-2 text-sm text-muted">
         {placeLabel(filters)} · {typeSummary} · max {formatMio(filters.priceMax)}
-        {split ? ` · ${countLabel}` : ""}
       </p>
-      {split && sources.length ? (
-        <p className="mt-1 truncate text-xs text-faint">{sources.join(" · ")}</p>
-      ) : null}
+      {sources.length ? <p className="mt-1 truncate text-xs text-faint">{sources.join(" · ")}</p> : null}
       {extras.length ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {extras.map((label) => (
@@ -105,29 +95,27 @@ export function HuntHeader({
           ))}
         </div>
       ) : null}
-      {split ? null : (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div className="flex overflow-x-auto rounded-full border border-border bg-surface p-1">
-            <ViewTab active={view === "list"} onClick={() => onView("list")} icon={<LayoutGrid className="size-4" />} label="Liste" />
-            <ViewTab active={view === "map"} onClick={() => onView("map")} icon={<MapIcon className="size-4" />} label="Kort" />
-            {moduleOn("listen") ? (
-              <ViewTab active={view === "listen"} onClick={() => onView("listen")} icon={<Radio className="size-4" />} label="Lyt" />
-            ) : null}
-            {moduleOn("saved") ? (
-              <ViewTab active={view === "saved"} onClick={() => onView("saved")} icon={<Heart className="size-4" />} label="Gemte" />
-            ) : null}
-          </div>
-          <p className="ml-auto text-sm tabular-nums text-muted">{countLabel}</p>
-          {view === "listen" ? (
-            <ListenAllButton
-              showAll={listenAll}
-              matched={listenMatched}
-              found={listenFound}
-              onToggle={onToggleListenAll}
-            />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap rounded-full border border-border bg-surface p-1">
+          <ViewTab active={view === "list"} onClick={() => onView("list")} icon={<LayoutGrid className="size-4" />} label="Liste" />
+          <ViewTab active={view === "map"} onClick={() => onView("map")} icon={<MapIcon className="size-4" />} label="Kort" />
+          {moduleOn("listen") ? (
+            <ViewTab active={view === "listen"} onClick={() => onView("listen")} icon={<Radio className="size-4" />} label="Lyt" />
+          ) : null}
+          {moduleOn("saved") ? (
+            <ViewTab active={view === "saved"} onClick={() => onView("saved")} icon={<Heart className="size-4" />} label="Gemte" />
           ) : null}
         </div>
-      )}
+        <p className="text-sm tabular-nums text-muted">{countLabel}</p>
+        {view === "listen" ? (
+          <ListenAllButton
+            showAll={listenAll}
+            matched={listenMatched}
+            found={listenFound}
+            onToggle={onToggleListenAll}
+          />
+        ) : null}
+      </div>
     </header>
   );
 }

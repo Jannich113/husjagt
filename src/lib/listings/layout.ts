@@ -15,39 +15,17 @@ export function deviceFromSize(size: SizeClass): DeviceFrame {
   return "phone";
 }
 
-function screenElement(): HTMLElement {
-  return document.querySelector<HTMLElement>(".wv-screen") ?? document.documentElement;
-}
+/** Single layout breakpoint — side-by-side list/detail above this width. */
+export const HUNT_WIDE_PX = 860;
 
-export function useSizeClass(): SizeClass {
-  const [size, setSize] = useState<SizeClass>("compact");
-
+export function useMinWidth(px: number): boolean {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
-    let observed: Element | null = null;
-    const ro = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? screenElement().clientWidth;
-      setSize(sizeClassFromWidth(width || window.innerWidth));
-    });
-
-    function attach() {
-      const el = screenElement();
-      if (el === observed) return;
-      if (observed) ro.unobserve(observed);
-      observed = el;
-      ro.observe(el);
-      setSize(sizeClassFromWidth(el.clientWidth || window.innerWidth));
-    }
-
-    attach();
-    const mo = new MutationObserver(attach);
-    mo.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("resize", attach);
-    return () => {
-      ro.disconnect();
-      mo.disconnect();
-      window.removeEventListener("resize", attach);
-    };
-  }, []);
-
-  return size;
+    const mq = window.matchMedia(`(min-width: ${px}px)`);
+    const apply = () => setMatches(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [px]);
+  return matches;
 }

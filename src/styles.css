@@ -436,67 +436,15 @@
   visibility: hidden;
 }
 
-.hunt-app-split {
+.hunt-shell {
   display: flex;
-  flex-direction: row;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.hunt-rail {
-  display: flex;
-  width: 5.5rem;
-  flex: none;
-  flex-direction: column;
-  align-items: stretch;
-  align-self: stretch;
-  gap: 4px;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-surface);
-  padding: 12px 8px;
-}
-
-.hunt-rail-item {
-  display: flex;
-  min-height: 3.5rem;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border-radius: var(--radius-md);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-muted);
-}
-
-.hunt-rail-item.is-active {
-  background: var(--color-primary);
-  color: var(--color-primary-fg);
-}
-
-.hunt-rail-badge {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  min-width: 1.1rem;
-  border-radius: 999px;
-  background: var(--color-danger);
-  padding: 0 4px;
-  font-size: 9px;
-  line-height: 1.15rem;
-  color: var(--color-primary-fg);
-  text-align: center;
-}
-
-.hunt-main {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
+  height: 100dvh;
+  min-height: 100dvh;
   flex-direction: column;
   overflow: hidden;
+  margin-inline: auto;
+  max-width: 80rem;
+  background: var(--color-bg);
 }
 
 .hunt-body {
@@ -508,28 +456,15 @@
 }
 
 .hunt-split {
-  display: flex;
+  display: grid;
   min-height: 0;
   flex: 1 1 auto;
+  grid-template-columns: 1fr;
   overflow: hidden;
 }
 
 .hunt-list-pane {
-  width: 22rem;
-  flex: none;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg);
-}
-
-.hunt-app-split[data-size="expanded"] .hunt-list-pane {
-  width: 24rem;
-}
-
-.hunt-detail-pane {
-  min-width: 0;
-  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   background: var(--color-bg);
@@ -538,19 +473,63 @@
 .hunt-map-pane {
   position: relative;
   min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
+  min-height: 22rem;
   overflow: hidden;
   background: var(--color-sunken);
 }
 
+.hunt-detail-pane,
 .hunt-support-pane {
-  width: 22rem;
-  flex: none;
+  display: none;
+  min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  border-left: 1px solid var(--color-border);
   background: var(--color-bg);
+}
+
+.hunt-split.is-open .hunt-detail-pane,
+.hunt-split.is-open .hunt-support-pane {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow: auto;
+  background: var(--color-bg);
+}
+
+@media (min-width: 860px) {
+  .hunt-split {
+    grid-template-columns: minmax(18rem, 24rem) 1fr;
+  }
+
+  .hunt-split:has(.hunt-map-pane) {
+    grid-template-columns: 1fr minmax(18rem, 24rem);
+  }
+
+  .hunt-list-pane {
+    border-right: 1px solid var(--color-border);
+  }
+
+  .hunt-map-pane {
+    min-height: 0;
+  }
+
+  .hunt-detail-pane,
+  .hunt-support-pane {
+    display: block;
+    position: static;
+  }
+
+  .hunt-support-pane {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .hunt-split.is-open .hunt-detail-pane,
+  .hunt-split.is-open .hunt-support-pane {
+    position: static;
+    inset: auto;
+    z-index: auto;
+  }
 }
 
 .hunt-empty-pane {
