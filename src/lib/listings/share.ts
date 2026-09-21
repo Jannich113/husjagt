@@ -38,6 +38,7 @@ export type HuntSearch = {
   sort?: string;
   desc?: number;
   kort?: string;
+  bydel?: string;
   view?: string;
 };
 
@@ -48,6 +49,7 @@ const TYPE_SLUG: Record<string, string> = {
   condo: "lejlighed",
   "villa apartment": "villalejlighed",
   "holiday house": "fritid",
+  "full year allotment garden": "koloni",
   farm: "land",
   "hobby farm": "hobby",
 };
@@ -71,6 +73,11 @@ const SLUG_TYPE: Record<string, string> = {
   fritidshus: "holiday house",
   "holiday-house": "holiday house",
   "holiday house": "holiday house",
+  koloni: "full year allotment garden",
+  kolonihave: "full year allotment garden",
+  allotment: "full year allotment garden",
+  "full-year-allotment-garden": "full year allotment garden",
+  "full year allotment garden": "full year allotment garden",
   land: "farm",
   landejendom: "farm",
   farm: "farm",
@@ -149,6 +156,8 @@ export function parseHuntSearch(raw: Record<string, unknown> | null | undefined)
   }
   const bounds = asString(raw.kort) ?? asString(raw.bounds);
   if (bounds) out.kort = bounds;
+  const districts = asString(raw.bydel) ?? asString(raw.districts);
+  if (districts) out.bydel = districts;
   const view = asString(raw.view);
   if (view && VIEW_IN[view]) out.view = VIEW_OUT[VIEW_IN[view]] ?? view;
   return out;
@@ -185,7 +194,8 @@ export function filtersFromHunt(hunt: HuntSearch | null | undefined): SearchFilt
     freshOnly: src.ny === 1,
     sortBy: src.sort && SORT_KEYS.has(src.sort) ? (src.sort as SearchFilters["sortBy"]) : "price",
     sortAscending: src.desc !== 1,
-    bounds: parseBounds(src.kort),
+    boxes: parseBoxes(src.kort),
+    districts: parseDistricts(src.bydel),
   };
 }
 
@@ -233,7 +243,8 @@ export function huntFromFilters(
   if (filters.freshOnly) out.ny = 1;
   if (filters.sortBy !== "price") out.sort = filters.sortBy;
   if (!filters.sortAscending) out.desc = 1;
-  if (filters.bounds) out.kort = encodeBounds(filters.bounds);
+  if (filters.boxes?.length) out.kort = encodeBoxes(filters.boxes);
+  if (filters.districts?.length) out.bydel = filters.districts.join(",");
   const viewSlug = VIEW_OUT[view];
   if (viewSlug) out.view = viewSlug;
   return out;
@@ -483,10 +494,44 @@ function parseBounds(raw: string | undefined): GeoBounds | null {
   return { minLon, minLat, maxLon, maxLat };
 }
 
+function parseBoxes(raw: string | undefined): GeoBounds[] {
+  if (!raw) return [];
+  const chunks = raw.includes("|") ? raw.split("|") : raw.split(/;(?=\s*-?\d)/);
+  const boxes: GeoBounds[] = [];
+  if (chunks.length === 1 && !raw.includes("|")) {
+    const parts = raw.split(",").map((part) => Number(part.trim()));
+    if (parts.length === 4) {
+      const box = parseBounds(raw);
+      return box ? [box] : [];
+    }
+    if (parts.length > 4 && parts.length % 4 === 0) {
+      for (let i = 0; i < parts.length; i += 4) {
+        const box = parseBounds(parts.slice(i, i + 4).join(","));
+        if (box) boxes.push(box);
+      }
+      return boxes;
+    }
+  }
+  for (const chunk of chunks) {
+    const box = parseBounds(chunk.trim());
+    if (box) boxes.push(box);
+  }
+  return boxes.slice(0, 8);
+}
+
+function parseDistricts(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return [...new Set(raw.split(",").map((part) => part.trim().toLowerCase()).filter(Boolean))].slice(0, 20);
+}
+
 function encodeBounds(bounds: GeoBounds): string {
   return [bounds.minLon, bounds.minLat, bounds.maxLon, bounds.maxLat]
     .map((n) => n.toFixed(5))
     .join(",");
+}
+
+function encodeBoxes(boxes: GeoBounds[]): string {
+  return boxes.map(encodeBounds).join("|");
 }
 
 function sameSet(a: string[], b: string[]): boolean {

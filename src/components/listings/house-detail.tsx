@@ -1,6 +1,7 @@
 import { ArrowLeft, ExternalLink, Heart, MapPin } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
+import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
 import { Button } from "@/components/ui/button";
 import { useFavorites } from "@/lib/listings/favorites";
@@ -35,12 +36,9 @@ export function HouseDetail({
   const firstSeenAt = useFirstSeen((s) => s.seenAt[listing.id]);
   const fresh = listingFreshness(listing, firstSeenAt);
   const freshText = freshnessLabel(fresh);
-  const [broken, setBroken] = useState(false);
   const share = useMemo(() => listingShareCopy(listing), [listing]);
   const href = listing.caseUrl || boligsidenUrl(listing.slugAddress || listing.slug);
-  const photos = (listing.images?.length ? listing.images : listing.image ? [listing.image] : []).filter(
-    () => !broken,
-  );
+  const photos = listing.images?.length ? listing.images : listing.image ? [listing.image] : [];
 
   return (
     <main className={cn("mx-auto bg-bg pb-16", embedded ? "max-w-none" : "min-h-dvh max-w-3xl")}>
@@ -84,16 +82,13 @@ export function HouseDetail({
         </div>
       </div>
 
-      {photos[0] ? (
-        <img
-          src={photos[0]}
+      <div className="h-64 w-full bg-sunken sm:h-80">
+        <ListingPhoto
+          src={photos[0] ?? listing.image}
           alt={listing.imageAlt ?? listing.street}
           className="h-64 w-full object-cover sm:h-80"
-          onError={() => setBroken(true)}
         />
-      ) : (
-        <div className="flex h-48 items-center justify-center bg-sunken text-muted">Intet foto</div>
-      )}
+      </div>
 
       <div className="px-5 pt-5">
         {embedded ? null : (

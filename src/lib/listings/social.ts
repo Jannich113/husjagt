@@ -1,6 +1,6 @@
 import snapshot from "./social-snapshot.json";
 
-import type { SearchFilters } from "./types";
+import { ALLOTMENT_TYPE, isKolonihaveText, KOLONIHAVE_RE, type SearchFilters } from "./types";
 
 export const SOCIAL_PLATFORMS = [
   { id: "guloggratis", label: "GulogGratis" },
@@ -35,6 +35,8 @@ export type SocialListing = {
 
 export type SocialListenResult = {
   listings: SocialListing[];
+  all?: SocialListing[];
+  found: number;
   live: boolean;
   sources: string[];
 };
@@ -55,19 +57,46 @@ export function isPlayableVideo(item: SocialListing): boolean {
   return isVideoPost(item) && Boolean(item.video);
 }
 
+const DWELLING_RE =
+  /andelsbolig|andelslejlighed|villa|rækkehus|raekkehus|parcelhus|ejerlejlighed|villalejlighed|(?<![a-zæøå])lejlighed|sommerhus|fritidshus|kolonihave(?:hus)?|byhus|helårshus|helarshus|hus til salg|bolig til salg/i;
+
+const LISTEN_SKIP_RE =
+  /\b(søges|soeges|købes|koebes|udlejes|tilleje|til leje|dukkehus|modelhus|barbie|souvenir|platte|camping(?:vogn)?|autocamper|båd|jolle|trailer|anhænger|personbil|varebil|motorcykel|knallert|cykel|møbler|sofa|drivhus|redskabsskur|havehus|container|byggegrund|grundstykke|erhvervslokale|lager|kontor|butik|maskine)\b/i;
+
+export function listingBlob(item: Pick<SocialListing, "title" | "text" | "url" | "street" | "city">): string {
+  return `${item.title} ${item.text} ${item.url} ${item.street ?? ""} ${item.city ?? ""}`;
+}
+
+export function looksLikeDwelling(blob: string): boolean {
+  return DWELLING_RE.test(blob);
+}
+
+/** Houses/apartments only. Kolonihave stays out unless that type is selected. */
+export function keepListenListing(item: SocialListing, filters: SearchFilters): boolean {
+  const blob = listingBlob(item);
+  if (LISTEN_SKIP_RE.test(blob)) return false;
+  if (isKolonihaveText(blob) && filters.types.length && !filters.types.includes(ALLOTMENT_TYPE)) {
+    return false;
+  }
+  if (item.platform === "boliga") return true;
+  return looksLikeDwelling(blob);
+}
+
 const TYPE_HINTS: [string, RegExp][] = [
   ["cooperative", /\bandels(?:bolig|lejlighed)?\b/i],
   ["terraced house", /\brækkehus|\braekkehus/i],
   ["villa apartment", /\bvillalejlighed/i],
   ["condo", /\bejerlejlighed|(?<!andels)lejlighed\b/i],
-  ["holiday house", /\bsommerhus|\bfritidshus|\bkolonihave/i],
+  [ALLOTMENT_TYPE, KOLONIHAVE_RE],
+  ["holiday house", /\bsommerhus|\bfritidshus/i],
   ["hobby farm", /\bhobbyejendom/i],
   ["farm", /\blandejendom|\blandbrug/i],
   ["villa", /villa|parcelhus|\bhus\b/i],
 ];
 
 export function guessedPropertyType(item: SocialListing): string | null {
-  const blob = `${item.title} ${item.text}`;
+  const blob = `${item.title} ${item.text} ${item.street ?? ""} ${item.url}`;
+  if (isKolonihaveText(blob)) return ALLOTMENT_TYPE;
   for (const [id, re] of TYPE_HINTS) {
     if (re.test(blob)) return id;
   }
@@ -84,6 +113,7 @@ function parseFirstNumber(blob: string, re: RegExp): number | null {
 }
 
 export function socialMatchesFilters(item: SocialListing, filters: SearchFilters): boolean {
+  if (!keepListenListing(item, filters)) return false;
   if (item.price != null) {
     if (item.price < 50_000) return false;
     if (filters.priceMax != null && item.price > filters.priceMax) return false;
@@ -122,35 +152,129 @@ export function filterSocialListings(listings: SocialListing[], filters: SearchF
   return listings.filter((item) => socialMatchesFilters(item, filters));
 }
 
-const IG_POST_CODE_RE = /instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i;
+/** “3 af 11 opslag” when hunt filters hide some of what Lyt found in the area. */
+export function listenCountLabel(matched: number, found: number): string {
+  const inArea = Math.max(found, matched);
+  if (inArea <= 0) return "0 opslag";
+  if (matched === inArea) return `${matched} opslag`;
+  return `${matched} af ${inArea} opslag`;
+}
+
+export function listenCountDetail(matched: number, found: number, areaName: string): string {
+  const inArea = Math.max(found, matched);
+  if (inArea <= 0) return `Ingen opslag i ${areaName} endnu.`;
+  if (matched === inArea) return `${inArea} opslag i ${areaName}.`;
+  if (matched === 0) {
+    return `${inArea} opslag i ${areaName}. Ingen matcher dine filtre.`;
+  }
+  return `${inArea} opslag i ${areaName}. ${matched} matcher filtrene.`;
+}
+
+export function listenPool(result: SocialListenResult): SocialListing[] {
+  const pool = result.all ?? [];
+  return pool.length ? pool : result.listings ?? [];
+}
+
+export function displayedListenListings(result: SocialListenResult, showAll: boolean): SocialListing[] {
+  return showAll ? listenPool(result) : result.listings;
+}
+
+const IG_PATH_RESERVED = new Set([
+  "reel",
+  "reels",
+  "p",
+  "stories",
+  "explore",
+  "accounts",
+  "tv",
+  "share",
+  "tags",
+  "tag",
+  "direct",
+  "live",
+]);
+/** `/reel/CODE`, `/reels/CODE`, `/p/CODE`, or `/{user}/reel/CODE`. */
+const IG_MEDIA_RE =
+  /instagram\.com\/(?:([A-Za-z0-9._]{2,30})\/)?(reel|reels|p)\/([A-Za-z0-9_-]+)/i;
+const TIKTOK_VIDEO_RE = /tiktok\.com\/@([\w.]+)\/video\/(\d+)/i;
+
+export type InstagramMedia = {
+  user: string | null;
+  code: string;
+  reel: boolean;
+};
+
+export function instagramMedia(url: string): InstagramMedia | null {
+  const match = url.match(IG_MEDIA_RE);
+  const kind = match?.[2]?.toLowerCase();
+  const code = match?.[3];
+  if (!kind || !code) return null;
+  const rawUser = match[1]?.toLowerCase() ?? null;
+  const user = rawUser && !IG_PATH_RESERVED.has(rawUser) ? rawUser : null;
+  return { user, code, reel: kind === "reel" || kind === "reels" };
+}
 
 /** Shortcode from a scraped Instagram post/reel URL, or null for profile/explore/other. */
 export function instagramPostCode(url: string): string | null {
-  return url.match(IG_POST_CODE_RE)?.[1] ?? null;
+  return instagramMedia(url)?.code ?? null;
+}
+
+export function isInstagramReelUrl(url: string, kind?: SocialKind): boolean {
+  const media = instagramMedia(url);
+  if (media) return media.reel;
+  return kind === "video";
+}
+
+function instagramHandle(raw: string | null | undefined): string | null {
+  const value = (raw ?? "").trim().replace(/^@+/, "").toLowerCase();
+  if (!value || IG_PATH_RESERVED.has(value) || !/^[a-z0-9._]{2,30}$/.test(value)) return null;
+  return value;
+}
+
+/** Canonical web permalink. Reels use `/{user}/reel/{code}/` so Instagram does not open the Reels feed. */
+export function instagramPermalink(item: Pick<SocialListing, "url" | "author" | "kind">): string | null {
+  const media = instagramMedia(item.url);
+  if (!media) return null;
+  const reel = media.reel || item.kind === "video";
+  const user = instagramHandle(media.user) ?? instagramHandle(item.author);
+  const path = reel ? "reel" : "p";
+  if (user) return `https://www.instagram.com/${user}/${path}/${media.code}/`;
+  return `https://www.instagram.com/${path}/${media.code}/`;
+}
+
+export function tiktokVideoParts(url: string): { author: string; id: string } | null {
+  const match = url.match(TIKTOK_VIDEO_RE);
+  if (!match?.[1] || !match[2]) return null;
+  return { author: match[1], id: match[2] };
 }
 
 /**
- * URL opened when tapping "Åbn på …" for a social listing.
- * Instagram `/reel/{code}/` deep-links often land on the Reels feed (neighbouring
- * clip); map to the post permalink `/p/{code}/` derived from the stored scrape URL.
- * TikTok and other platforms keep their stored URL unchanged.
+ * URL opened when tapping "Åbn på …".
+ * Instagram Reels: `https://www.instagram.com/{user}/reel/{code}/` (never `/reels/` or `/p/` for videos).
+ * TikTok: web-share video URL so the app does not open For You.
  */
 export function openedSocialUrl(item: SocialListing): string {
   if (item.platform === "instagram") {
-    const code = instagramPostCode(item.url);
-    if (code) return `https://www.instagram.com/p/${code}/`;
+    return instagramPermalink(item) ?? item.url;
+  }
+  if (item.platform === "tiktok") {
+    const parts = tiktokVideoParts(item.url);
+    if (parts) {
+      return `https://www.tiktok.com/@${parts.author}/video/${parts.id}?is_from_webapp=1&sender_device=pc`;
+    }
   }
   return item.url;
 }
 
 export function videoEmbedUrl(item: SocialListing): string | null {
   if (item.platform === "instagram") {
-    const code = instagramPostCode(item.url);
-    // Prefer /p/ embed so the iframe matches the opened deep-link shortcode.
-    return code ? `https://www.instagram.com/p/${code}/embed` : null;
+    const media = instagramMedia(item.url);
+    if (!media) return null;
+    const path = media.reel || item.kind === "video" ? "reel" : "p";
+    return `https://www.instagram.com/${path}/${media.code}/embed`;
   }
   if (item.platform === "tiktok") {
-    const id = item.url.match(/\/video\/(\d+)/)?.[1];
+    const id = tiktokVideoParts(item.url)?.id;
     return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
   }
   return null;
@@ -184,21 +308,31 @@ export function localVideoListings(municipality: string): SocialListing[] {
 }
 
 export function withLocalVideos(result: SocialListenResult, filters: SearchFilters): SocialListenResult {
-  const local = localVideoListings(filters.municipality).filter((item) => socialMatchesFilters(item, filters));
-  const filtered = filterSocialListings(result.listings, filters);
+  const local = localVideoListings(filters.municipality);
+  const incoming = result.all ?? [];
+  const seed = incoming.length ? incoming : result.listings ?? [];
   const seen = new Set<string>();
-  for (const item of filtered) {
+  const pool: SocialListing[] = [];
+  for (const item of [...local, ...seed]) {
+    if (!item || seen.has(item.id) || seen.has(item.url)) continue;
     seen.add(item.id);
     seen.add(item.url);
+    pool.push(item);
   }
-  const extra = local.filter((item) => !seen.has(item.id) && !seen.has(item.url));
-  const listings = extra.length ? [...extra, ...filtered] : filtered;
+  const scoped = pool.filter((item) => keepListenListing(item, filters));
+  const listings = filterSocialListings(scoped, filters);
   const sources = Array.from(
     new Set([
-      ...(listings.some((item) => item.platform === "instagram") ? ["Instagram"] : []),
-      ...(listings.some((item) => item.platform === "tiktok") ? ["TikTok"] : []),
+      ...(scoped.some((item) => item.platform === "instagram") ? ["Instagram"] : []),
+      ...(scoped.some((item) => item.platform === "tiktok") ? ["TikTok"] : []),
       ...result.sources,
     ]),
   );
-  return { ...result, listings, sources };
+  return {
+    ...result,
+    all: scoped,
+    listings,
+    found: scoped.length,
+    sources,
+  };
 }

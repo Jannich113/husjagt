@@ -1,9 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { mergeSearchResults } from "./aggregate";
-import { searchBoliga } from "./boliga.server";
-import { getBoligsidenCase, searchBoligsiden, snapshotSearch } from "./boligsiden.server";
-import { listenPrivateAds, listenSocial as runSocialListen } from "./social.server";
+import { liveHuntServices } from "@/lib/hunt/container.server";
+import { runGetListing, runHuntSearch } from "@/lib/hunt/run-search";
 import { DEFAULT_FILTERS } from "./types";
 
 const filtersSchema = z.object({
@@ -43,6 +41,18 @@ const filtersSchema = z.object({
   sortAscending: z.boolean(),
   page: z.number().int().min(1).max(40),
   perPage: z.number().int().min(10).max(50),
+  boxes: z
+    .array(
+      z.object({
+        minLon: z.number(),
+        minLat: z.number(),
+        maxLon: z.number(),
+        maxLat: z.number(),
+      }),
+    )
+    .max(8)
+    .default([]),
+  districts: z.array(z.string().max(40)).max(20).default([]),
   bounds: z
     .object({
       minLon: z.number(),
@@ -50,7 +60,8 @@ const filtersSchema = z.object({
       maxLon: z.number(),
       maxLat: z.number(),
     })
-    .nullable(),
+    .nullable()
+    .optional(),
 });
 
 const listenSchema = filtersSchema.extend({
@@ -58,53 +69,60 @@ const listenSchema = filtersSchema.extend({
   socialTags: z.array(z.string().max(40)).max(40).optional(),
 });
 
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((resolve) => {
-      setTimeout(() => resolve(fallback), ms);
-    }),
-  ]);
+function huntFilters(data: z.infer<typeof filtersSchema>) {
+  return {
+    ...DEFAULT_FILTERS,
+    ...data,
+    boxes: data.boxes?.length ? data.boxes : data.bounds ? [data.bounds] : [],
+    districts: data.districts ?? [],
+  };
 }
-
-const EMPTY_BOLIGA = {
-  totalHits: 0,
-  listings: [],
-  live: false,
-  source: "Boliga",
-  sources: [] as string[],
-};
 
 export const searchHousesFast = createServerFn({ method: "POST" })
   .validator(filtersSchema)
   .handler(async ({ data }) => {
-    return snapshotSearch({ ...DEFAULT_FILTERS, ...data });
+    return liveHuntServices().snapshot(huntFilters(data));
   });
 
 export const searchHouses = createServerFn({ method: "POST" })
   .validator(filtersSchema)
   .handler(async ({ data }) => {
-    const filters = { ...DEFAULT_FILTERS, ...data };
-    const [boligsiden, boliga, classifieds] = await Promise.all([
-      searchBoligsiden(filters),
-      withTimeout(searchBoliga(filters).catch(() => EMPTY_BOLIGA), 4500, EMPTY_BOLIGA),
-      withTimeout(listenPrivateAds(filters).catch(() => []), 4500, []),
-    ]);
-    return mergeSearchResults(filters, [boligsiden, boliga], classifieds);
+    return runHuntSearch(liveHuntServices(), huntFilters(data));
   });
 
 export const listenSocial = createServerFn({ method: "POST" })
   .validator(listenSchema)
   .handler(async ({ data }) => {
     const { socialAccounts, socialTags, ...rest } = data;
-    return runSocialListen(
-      { ...DEFAULT_FILTERS, ...rest },
-      { accounts: socialAccounts, tags: socialTags },
-    );
+    return liveHuntServices().social.listen(huntFilters(rest), {
+      accounts: socialAccounts,
+      tags: socialTags,
+    });
   });
 
 export const getListing = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.string().min(1).max(80) }))
   .handler(async ({ data }) => {
-    return getBoligsidenCase(data.id);
+    return runGetListing(liveHuntServices(), data.id);
+  });
+
+export const loadKommuneDistricts = createServerFn({ method: "POST" })
+  .validator(z.object({ municipality: z.string().min(1).max(80) }))
+  .handler(async ({ data }) => {
+    const services = liveHuntServices();
+    const rows = await services.places.districts(data.municipality);
+    services.places.remember?.(data.municipality, rows);
+    return rows;
+  });
+
+export const suggestDawaPostnumre = createServerFn({ method: "POST" })
+  .validator(z.object({ q: z.string().min(1).max(80), municipality: z.string().max(80).optional() }))
+  .handler(async ({ data }) => {
+    return liveHuntServices().places.suggestPostnumre(data.q, data.municipality);
+  });
+
+export const suggestHuntPlaces = createServerFn({ method: "POST" })
+  .validator(z.object({ q: z.string().max(80) }))
+  .handler(async ({ data }) => {
+    return liveHuntServices().places.suggestPlaces(data.q);
   });

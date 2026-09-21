@@ -5,11 +5,30 @@ export const PROPERTY_TYPES = [
   { id: "condo", label: "Ejerlejlighed" },
   { id: "villa apartment", label: "Villalejlighed" },
   { id: "holiday house", label: "Fritidshus" },
+  { id: "full year allotment garden", label: "Kolonihave" },
   { id: "farm", label: "Landejendom" },
   { id: "hobby farm", label: "Hobbyejendom" },
 ] as const;
 
 export type PropertyTypeId = (typeof PROPERTY_TYPES)[number]["id"];
+
+export const ALLOTMENT_TYPE = "full year allotment garden";
+export const KOLONIHAVE_RE = /\bkolonihave(?:hus)?\b|\bhaveforening\b|\bh\/f\b/i;
+
+export function isKolonihaveText(...parts: Array<string | null | undefined>): boolean {
+  return KOLONIHAVE_RE.test(parts.filter(Boolean).join(" "));
+}
+
+export function listingAllowedByTypes(
+  listing: { type: string; street?: string | null; city?: string | null },
+  types: string[],
+): boolean {
+  if (!types.length) return true;
+  if (isKolonihaveText(listing.type, listing.street, listing.city) && !types.includes(ALLOTMENT_TYPE)) {
+    return false;
+  }
+  return types.includes(listing.type);
+}
 
 export type GeoBounds = {
   minLon: number;
@@ -69,7 +88,8 @@ export type SearchFilters = {
   sortAscending: boolean;
   page: number;
   perPage: number;
-  bounds: GeoBounds | null;
+  boxes: GeoBounds[];
+  districts: string[];
 };
 
 /** Defaults match the Boligsiden search you shared (Odense, villa/rækkehus/andel, max 2 mio). */
@@ -102,7 +122,8 @@ export const DEFAULT_FILTERS: SearchFilters = {
   sortAscending: true,
   page: 1,
   perPage: 50,
-  bounds: null,
+  boxes: [],
+  districts: [],
 };
 
 /** Tight map snippet from the original Boligsiden URL. */
@@ -120,7 +141,13 @@ export function energyBand(label: string | null | undefined): EnergyLabel | null
 }
 
 export function usesClientOnlyFilters(filters: SearchFilters): boolean {
-  return Boolean(filters.priceDropOnly || filters.freshOnly || filters.bounds || filters.m2PriceMax != null);
+  return Boolean(
+    filters.priceDropOnly ||
+      filters.freshOnly ||
+      (filters.boxes?.length ?? 0) > 0 ||
+      (filters.districts?.length ?? 0) > 0 ||
+      filters.m2PriceMax != null,
+  );
 }
 
 export function advancedFilterCount(filters: SearchFilters): number {
@@ -144,6 +171,8 @@ export function advancedFilterCount(filters: SearchFilters): number {
   if (filters.elevator) n += 1;
   if (filters.priceDropOnly) n += 1;
   if (filters.freshOnly) n += 1;
+  if (filters.boxes?.length) n += 1;
+  if (filters.districts?.length) n += 1;
   if (filters.sortBy !== "price" || !filters.sortAscending) n += 1;
   return n;
 }

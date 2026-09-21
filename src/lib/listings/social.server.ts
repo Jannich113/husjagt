@@ -2,7 +2,8 @@ import snapshot from "./social-snapshot.json";
 import { kommuneBySlug } from "./kommuner";
 import { proxyFetch } from "./proxy-fetch";
 import type { SearchFilters } from "./types";
-import { isVideoPlatform, socialMatchesFilters, type SocialListing, type SocialListenResult, type SocialPlatform } from "./social";
+import { ALLOTMENT_TYPE } from "./types";
+import { isVideoPlatform, keepListenListing, socialMatchesFilters, type SocialListing, type SocialListenResult, type SocialPlatform } from "./social";
 import {
   buildInstagramQueries,
   buildTikTokQueries,
@@ -18,9 +19,7 @@ const BROWSER_HEADERS = {
 };
 
 const HOUSE_RE =
-  /\b(andelsbolig|andelslejlighed|\bandel\b|villa|rækkehus|raekkehus|parcelhus|ejerlejlighed|sommerhus|kolonihave|byhus|helårshus|helarshus|ejendom|hus til salg|lejlighed til salg|tilsalg)\b/i;
-const SKIP_RE =
-  /\b(søges|soeges|købes|koebes|udlejes|tilleje|til leje|dukkehus|modelhus|barbie|souvenir|platte)\b/i;
+  /andelsbolig|andelslejlighed|villa|rækkehus|raekkehus|parcelhus|ejerlejlighed|villalejlighed|(?<![a-zæøå])lejlighed|sommerhus|fritidshus|kolonihave(?:hus)?|byhus|helårshus|helarshus|hus til salg|bolig til salg/i;
 const MIN_PRICE = 50_000;
 
 const zipCache = new Map<number, string[]>();
@@ -219,38 +218,32 @@ function productToListing(
   };
 }
 
-function keepHouse(
+function inListenScope(
   item: SocialListing,
   tokens: string[],
   filters: SearchFilters,
   requireArea = true,
 ): boolean {
+  if (!keepListenListing(item, filters)) return false;
   const blob = `${item.title} ${item.text} ${item.url} ${item.city ?? ""} ${item.zip ?? ""}`;
-  if (SKIP_RE.test(blob)) return false;
-  if (!HOUSE_RE.test(blob) && item.platform !== "boliga" && !isVideoPlatform(item.platform)) {
-    return false;
-  }
   if (requireArea && !blobMatches(blob, tokens)) return false;
-  if (!socialMatchesFilters(item, filters)) return false;
-  const city = filters.city?.trim().toLowerCase();
-  if (city && !blob.toLowerCase().includes(city)) return false;
-  const zip = filters.zipCode?.replace(/\D/g, "");
-  if (zip && zip.length === 4 && item.zip !== zip && !blob.includes(zip)) return false;
   return true;
 }
 
 async function listenGulogGratis(name: string, tokens: string[], filters: SearchFilters): Promise<SocialListing[]> {
   const q = encodeURIComponent(name);
+  const wantKoloni = !filters.types.length || filters.types.includes(ALLOTMENT_TYPE);
   const urls = [
     `https://www.guloggratis.dk/s/q-andelsbolig+${q}`,
-    `https://www.guloggratis.dk/s/q-kolonihave+${q}`,
+    ...(wantKoloni ? [`https://www.guloggratis.dk/s/q-kolonihave+${q}`] : []),
     `https://www.guloggratis.dk/s/q-${q}+%22hus+til+salg%22`,
-    `https://www.guloggratis.dk/s/q-villa+${q}`,
+    `https://www.guloggratis.dk/s/q-${q}+sælges`,
+    `https://www.guloggratis.dk/s/q-andelslejlighed+${q}`,
     `https://www.guloggratis.dk/s/q-rækkehus+${q}`,
     "https://www.guloggratis.dk/kategori/diverse/ejendomme/felter/produkttype/andelsboliger",
     "https://www.guloggratis.dk/kategori/diverse/ejendomme/felter/produkttype/huse",
   ];
-  const pages = await Promise.all(urls.map((url) => fetchText(url)));
+  const pages = await Promise.all(urls.map((url) => fetchText(url, true)));
   const listings: SocialListing[] = [];
   const seen = new Set<string>();
   for (const html of pages) {
@@ -258,7 +251,7 @@ async function listenGulogGratis(name: string, tokens: string[], filters: Search
     for (const product of jsonLdProducts(html)) {
       const item = productToListing(product, "guloggratis", name);
       if (!item || seen.has(item.id) || seen.has(item.url)) continue;
-      if (!keepHouse(item, tokens, filters)) continue;
+      if (!inListenScope(item, tokens, filters)) continue;
       seen.add(item.id);
       seen.add(item.url);
       listings.push(item);
@@ -277,8 +270,13 @@ function decodeB64Json(raw: string): unknown | null {
 }
 
 async function listenDba(name: string, tokens: string[], filters: SearchFilters): Promise<SocialListing[]> {
-  const q = encodeURIComponent(`${name} andelsbolig OR kolonihave OR "hus til salg"`);
-  const html = await fetchText(`https://www.dba.dk/soeg/?soeg=${q}`);
+  const wantKoloni = !filters.types.length || filters.types.includes(ALLOTMENT_TYPE);
+  const q = encodeURIComponent(
+    wantKoloni
+      ? `${name} andelsbolig OR kolonihave OR "hus til salg"`
+      : `${name} andelsbolig OR "hus til salg"`,
+  );
+  const html = await fetchText(`https://www.dba.dk/soeg/?soeg=${q}`, true);
   if (!html) return [];
   const listings: SocialListing[] = [];
   const scripts = html.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi);
@@ -324,7 +322,7 @@ async function listenDba(name: string, tokens: string[], filters: SearchFilters)
           postedAt: typeof rec.timestamp === "number" ? new Date(rec.timestamp).toISOString() : null,
           ...emptyMedia(),
         };
-        if (keepHouse(item, tokens, filters)) listings.push(item);
+        if (inListenScope(item, tokens, filters)) listings.push(item);
       }
     }
   }
@@ -336,7 +334,7 @@ async function listenBoligaSelfsale(
   tokens: string[],
   filters: SearchFilters,
 ): Promise<SocialListing[]> {
-  const max = filters.priceMax ?? 8_000_000;
+  const max = 8_000_000;
   const listings: SocialListing[] = [];
   for (let page = 1; page <= 3; page += 1) {
     const url =
@@ -368,7 +366,7 @@ async function listenBoligaSelfsale(
         postedAt: typeof rec.createdDate === "string" ? rec.createdDate : null,
         ...emptyMedia(),
       };
-      if (keepHouse(item, tokens, filters)) listings.push(item);
+      if (inListenScope(item, tokens, filters)) listings.push(item);
     }
   }
   return listings;
@@ -422,19 +420,47 @@ async function searchVideoUrls(
   );
   const found: { url: string; fromAccount: boolean; account: string | null }[] = [];
   const seen = new Map<string, number>();
+  function push(url: string, fromAccount: boolean, account: string | null) {
+    const existing = seen.get(url);
+    if (existing != null) {
+      if (fromAccount && !found[existing]?.fromAccount) {
+        found[existing] = { url, fromAccount: true, account };
+      }
+      return;
+    }
+    if (found.length >= limit) return;
+    seen.set(url, found.length);
+    found.push({ url, fromAccount, account });
+  }
   for (const { row, html } of pages) {
     if (!html) continue;
-    for (const url of collectUrls(html, pattern)) {
-      const existing = seen.get(url);
-      if (existing != null) {
-        if (row.fromAccount && !found[existing]?.fromAccount) {
-          found[existing] = { url, fromAccount: true, account: row.account };
-        }
-        continue;
-      }
-      if (found.length >= limit) continue;
-      seen.set(url, found.length);
-      found.push({ url, fromAccount: row.fromAccount, account: row.account });
+    for (const url of collectUrls(html, pattern)) push(url, row.fromAccount, row.account);
+  }
+  return found;
+}
+
+const TIKTOK_VIDEO_RE = /https?:\/\/(?:www\.)?tiktok\.com\/@[\w.]+\/video\/\d+/gi;
+
+async function tiktokTagHits(
+  tags: string[],
+  limit: number,
+): Promise<{ url: string; fromAccount: boolean; account: string | null; tag: string }[]> {
+  const pages = await Promise.all(
+    tags.slice(0, 4).map(async (tag) => ({
+      tag,
+      html: await fetchText(`https://www.tiktok.com/tag/${encodeURIComponent(tag)}`, true),
+    })),
+  );
+  const found: { url: string; fromAccount: boolean; account: string | null; tag: string }[] = [];
+  const seen = new Set<string>();
+  for (const { tag, html } of pages) {
+    if (!html) continue;
+    for (const raw of collectUrls(html, TIKTOK_VIDEO_RE)) {
+      const url = raw.startsWith("http") ? raw : `https://www.${raw.replace(/^www\./, "")}`;
+      if (seen.has(url) || found.length >= limit) continue;
+      seen.add(url);
+      const account = url.match(/tiktok\.com\/@([\w.]+)/i)?.[1] ?? null;
+      found.push({ url, fromAccount: false, account, tag });
     }
   }
   return found;
@@ -452,17 +478,36 @@ async function listenTikTok(
   filters: SearchFilters,
   watch: { accounts: string[]; tags: string[] },
 ): Promise<SocialListing[]> {
-  const hits = await searchVideoUrls(
+  const kommuneSlug = name.toLowerCase().replace(/\s+/g, "");
+  const tagHits = await tiktokTagHits([kommuneSlug, ...watch.tags].filter(Boolean), 16);
+  const searchHits = await searchVideoUrls(
     buildTikTokQueries(name, watch.accounts, watch.tags),
-    /https?:\/\/(?:www\.)?tiktok\.com\/@[\w.]+\/video\/\d+/gi,
+    TIKTOK_VIDEO_RE,
     16,
   );
+  const seen = new Set<string>();
+  const hits: {
+    url: string;
+    fromAccount: boolean;
+    account: string | null;
+    fromTag?: boolean;
+    tag?: string;
+  }[] = [];
+  for (const hit of [
+    ...searchHits,
+    ...tagHits.map((row) => ({ ...row, fromTag: true as const })),
+  ]) {
+    if (seen.has(hit.url) || hits.length >= 16) continue;
+    seen.add(hit.url);
+    hits.push(hit);
+  }
   if (!hits.length) return [];
   const metas = await Promise.all(hits.map((hit) => tiktokOEmbed(hit.url)));
   const listings: SocialListing[] = [];
   hits.forEach((hit, index) => {
     const meta = metas[index];
     const title = meta?.title || "Hus til salg på TikTok";
+    if (hit.fromTag && !HOUSE_RE.test(`${title} ${meta?.author ?? ""}`)) return;
     const handle = hit.url.match(/tiktok\.com\/@([\w.]+)/i)?.[1] ?? hit.account ?? meta?.author ?? "";
     const place = placeFromText(title, `${name} ${handle}`, name);
     const item: SocialListing = {
@@ -470,7 +515,7 @@ async function listenTikTok(
       platform: "tiktok",
       title,
       text: handle ? `TikTok-video · @${handle}` : "TikTok-video",
-      url: hit.url,
+      url: hit.url.startsWith("http") ? hit.url : `https://www.${hit.url}`,
       price: captionPrice(title),
       city: place.city,
       zip: place.zip,
@@ -481,9 +526,9 @@ async function listenTikTok(
       kind: "video",
       postedAt: null,
     };
-    const requireArea = !hit.fromAccount;
-    const probe = requireArea ? { ...item, text: `${item.text} ${name} villa tilsalg` } : item;
-    if (keepHouse(probe, tokens, filters, requireArea)) {
+    const areaImplied = hit.fromTag && hit.tag === kommuneSlug;
+    const requireArea = !hit.fromAccount && !areaImplied;
+    if (inListenScope(item, tokens, filters, requireArea)) {
       listings.push(item);
     }
   });
@@ -498,14 +543,19 @@ async function listenInstagram(
 ): Promise<SocialListing[]> {
   const hits = await searchVideoUrls(
     buildInstagramQueries(name, watch.accounts, watch.tags),
-    /https?:\/\/(?:www\.)?instagram\.com\/(?:reel|reels|p)\/[A-Za-z0-9_-]+/gi,
+    /https?:\/\/(?:www\.)?instagram\.com\/(?:[A-Za-z0-9._]+\/)?(?:reel|reels|p)\/[A-Za-z0-9_-]+/gi,
     16,
   );
   const listings: SocialListing[] = [];
   for (const hit of hits) {
-    const code = hit.url.match(/instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i)?.[1] ?? "";
-    const canonical = code ? `https://www.instagram.com/reel/${code}/` : hit.url;
+    if (!hit.fromAccount) continue;
+    const code = hit.url.match(/instagram\.com\/(?:[A-Za-z0-9._]+\/)?(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i)?.[1] ?? "";
     const handle = hit.account;
+    const canonical = code
+      ? handle
+        ? `https://www.instagram.com/${handle}/reel/${code}/`
+        : `https://www.instagram.com/reel/${code}/`
+      : hit.url;
     const title = "Hus til salg på Instagram";
     const place = placeFromText(title, `${name} villa tilsalg`, name);
     const item: SocialListing = {
@@ -525,8 +575,7 @@ async function listenInstagram(
       postedAt: null,
     };
     const requireArea = !hit.fromAccount;
-    const probe = requireArea ? { ...item, text: `${item.text} ${name} villa tilsalg` } : item;
-    if (keepHouse(probe, tokens, filters, requireArea)) {
+    if (inListenScope(item, tokens, filters, requireArea)) {
       listings.push(item);
     }
   }
@@ -644,8 +693,8 @@ export async function listenSocial(
     listenGulogGratis(name, tokens, filters),
     listenDba(name, tokens, filters),
     kommune ? listenBoligaSelfsale(kommune.code, tokens, filters) : Promise.resolve([]),
-    withTimeout(listenTikTok(name, tokens, filters, lists), 10000, []),
-    withTimeout(listenInstagram(name, tokens, filters, lists), 10000, []),
+    withTimeout(listenTikTok(name, tokens, filters, lists), 18000, []),
+    withTimeout(listenInstagram(name, tokens, filters, lists), 12000, []),
   ]);
 
   const listings: SocialListing[] = [];
@@ -655,13 +704,19 @@ export async function listenSocial(
   });
 
   const extras = snapshotListings(filters.municipality).filter((item) =>
-    keepHouse(item, tokens, filters),
+    inListenScope(item, tokens, filters),
   );
-  const unique = uniqueListings([...listings, ...extras]);
+  const unique = uniqueListings([...listings, ...extras]).filter((item) =>
+    keepListenListing(item, filters),
+  );
   const live = listings.length > 0;
+  const ranked = sortListings(unique);
+  const matched = unique.filter((item) => socialMatchesFilters(item, filters));
 
   return {
-    listings: sortListings(unique).slice(0, 48),
+    listings: sortListings(matched).slice(0, 48),
+    all: ranked.slice(0, 48),
+    found: unique.length,
     live,
     sources: live ? sourceNames(unique) : extras.length ? ["Gemt Odense-lyt", ...sourceNames(extras)] : [],
   };

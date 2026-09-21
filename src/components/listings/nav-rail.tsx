@@ -1,12 +1,13 @@
 import { Heart, LayoutGrid, Map as MapIcon, Radio } from "lucide-react";
+import { moduleOn, type HuntModuleId } from "@/lib/hunt/modules";
 import type { HuntView } from "@/lib/listings/share";
 import { cn } from "@/lib/utils";
 
-const ITEMS: { id: HuntView; label: string; icon: typeof LayoutGrid }[] = [
+const ITEMS: { id: HuntView; label: string; icon: typeof LayoutGrid; module?: HuntModuleId }[] = [
   { id: "list", label: "Liste", icon: LayoutGrid },
   { id: "map", label: "Kort", icon: MapIcon },
-  { id: "listen", label: "Lyt", icon: Radio },
-  { id: "saved", label: "Gemte", icon: Heart },
+  { id: "listen", label: "Lyt", icon: Radio, module: "listen" },
+  { id: "saved", label: "Gemte", icon: Heart, module: "saved" },
 ];
 
 export function NavRail({
@@ -20,7 +21,7 @@ export function NavRail({
 }) {
   return (
     <nav className="hunt-rail" aria-label="Hovedmenu">
-      {ITEMS.map((item) => {
+      {ITEMS.filter((item) => !item.module || moduleOn(item.module)).map((item) => {
         const Icon = item.icon;
         const active = view === item.id;
         return (

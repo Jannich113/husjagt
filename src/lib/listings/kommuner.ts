@@ -104,3 +104,44 @@ export const KOMMUNER: Kommune[] = [
 export function kommuneBySlug(slug: string): Kommune | undefined {
   return KOMMUNER.find((k) => k.slug === slug);
 }
+
+export function kommuneByCode(code: number | string): Kommune | undefined {
+  const n = typeof code === "number" ? code : Number(String(code).replace(/\D/g, ""));
+  if (!Number.isFinite(n)) return undefined;
+  return KOMMUNER.find((k) => k.code === n);
+}
+
+export function slugifyKommuneName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "oe")
+    .replace(/å/g, "aa")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function kommuneByName(name: string): Kommune | undefined {
+  const needle = name.trim().toLowerCase();
+  if (!needle) return undefined;
+  const exact = KOMMUNER.find((k) => k.name.toLowerCase() === needle);
+  if (exact) return exact;
+  const slug = slugifyKommuneName(name);
+  return KOMMUNER.find((k) => k.slug === slug);
+}
+
+export function searchKommuner(query: string, limit = 8): Kommune[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return KOMMUNER.slice(0, limit);
+  const slug = slugifyKommuneName(q);
+  return KOMMUNER.filter(
+    (k) =>
+      k.name.toLowerCase().includes(q) ||
+      k.slug.includes(q) ||
+      k.slug.includes(slug) ||
+      String(k.code).includes(q),
+  ).slice(0, limit);
+}

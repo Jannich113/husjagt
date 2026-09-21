@@ -1,5 +1,6 @@
 import { listingFromSocial } from "./listing-from-social";
 import type { Listing, SearchFilters, SearchResult } from "./types";
+import { listingAllowedByTypes } from "./types";
 import type { SocialListing } from "./social";
 
 const SOURCE_RANK: Record<string, number> = {
@@ -66,7 +67,9 @@ export function mergeSearchResults(
   parts: SearchResult[],
   classifieds: SocialListing[] = [],
 ): SearchResult {
-  const extras = classifieds.map(listingFromSocial);
+  const extras = classifieds
+    .map(listingFromSocial)
+    .filter((row) => listingAllowedByTypes(row, filters.types));
   const merged = dedupeListings([...parts.flatMap((part) => part.listings), ...extras]);
   const sorted = sortListings(merged, filters);
   const sources = [

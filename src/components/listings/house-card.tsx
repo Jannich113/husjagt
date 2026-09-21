@@ -1,6 +1,6 @@
 import { Heart, MapPin } from "lucide-react";
-import { useState } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
+import { ListingPhoto } from "@/components/listings/listing-photo";
 import { useFavorites } from "@/lib/listings/favorites";
 import { formatDays, formatKr, formatM2, formatRooms, sourceLabel, typeLabel } from "@/lib/listings/format";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
@@ -70,8 +70,6 @@ export function HouseCard({
   const fresh = listingFreshness(listing, firstSeenAt);
   const unread = unseen && !fresh;
   const drop = listing.priceChange != null && listing.priceChange < -0.5;
-  const [broken, setBroken] = useState(false);
-  const photo = listing.image && !broken;
 
   if (layout === "row") {
     return (
@@ -84,17 +82,12 @@ export function HouseCard({
         <div className="flex gap-3 p-2">
           <button type="button" onClick={() => onOpen(listing)} className="flex min-w-0 flex-1 gap-3 text-left">
             <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-md bg-sunken">
-              {photo ? (
-                <img
-                  src={listing.image ?? undefined}
-                  alt={listing.imageAlt ?? listing.street}
-                  className="size-full object-cover"
-                  loading="lazy"
-                  onError={() => setBroken(true)}
-                />
-              ) : (
-                <div className="flex size-full items-center justify-center text-xs text-muted">Foto</div>
-              )}
+              <ListingPhoto
+                src={listing.image}
+                alt={listing.imageAlt ?? listing.street}
+                className="size-full object-cover"
+                placeholder="Foto"
+              />
               {fresh ? (
                 <span className="absolute left-1 top-1">
                   <FreshBadge kind={fresh} compact />
@@ -144,19 +137,11 @@ export function HouseCard({
     >
       <button type="button" onClick={() => onOpen(listing)} className="block w-full text-left">
         <div className="relative h-48 bg-sunken sm:h-52">
-          {photo ? (
-            <img
-              src={listing.image ?? undefined}
-              alt={listing.imageAlt ?? listing.street}
-              className="size-full object-cover"
-              loading="lazy"
-              onError={() => setBroken(true)}
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center text-sm text-muted">
-              Intet foto
-            </div>
-          )}
+          <ListingPhoto
+            src={listing.image}
+            alt={listing.imageAlt ?? listing.street}
+            className="size-full object-cover"
+          />
           <div className="absolute left-3 top-3 flex items-center gap-1.5">
             {fresh ? <FreshBadge kind={fresh} /> : unread ? <NewBadge /> : null}
             <span className="rounded-full bg-fg/80 px-2.5 py-1 text-xs font-medium text-primary-fg">

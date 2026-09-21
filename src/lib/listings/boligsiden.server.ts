@@ -1,8 +1,10 @@
 import snapshot from "./snapshot.json";
-import { mapDetail, mapListing, inBounds } from "./map-listing";
+import { mapDetail, mapListing, inAnyBox } from "./map-listing";
+import { listingInDistricts } from "./districts";
 import { proxyFetch } from "./proxy-fetch";
 import {
   energyBand,
+  listingAllowedByTypes,
   usesClientOnlyFilters,
   type Listing,
   type ListingDetail,
@@ -119,7 +121,7 @@ export function applyLocalFilters(listings: Listing[], filters: SearchFilters): 
   const city = filters.city?.trim().toLowerCase() ?? "";
   const energyWanted = new Set(filters.energyLabels.map((l) => l.toUpperCase()));
   return listings.filter((item) => {
-    if (filters.types.length && !filters.types.includes(item.type)) return false;
+    if (!listingAllowedByTypes(item, filters.types)) return false;
     if (filters.priceMax != null && item.price != null && item.price > filters.priceMax) return false;
     if (filters.priceMin != null && item.price != null && item.price < filters.priceMin) return false;
     if (filters.roomsMin != null && (item.rooms == null || item.rooms < filters.roomsMin)) return false;
@@ -148,12 +150,26 @@ export function applyLocalFilters(listings: Listing[], filters: SearchFilters): 
     if (zip && zipDigits(item.zip) !== zip) return false;
     if (city && !item.city.toLowerCase().includes(city)) return false;
     if (filters.priceDropOnly && !(item.priceChange != null && item.priceChange < -0.5)) return false;
-    if (filters.bounds && !inBounds(item, filters.bounds)) return false;
+    const boxes = filters.boxes ?? [];
+    const districts = filters.districts ?? [];
+    if (boxes.length && !inAnyBox(item, boxes)) return false;
+    if (districts.length && !listingInDistricts(item, filters.municipality, districts)) {
+      return false;
+    }
     return true;
   });
 }
 
 export function snapshotSearch(filters: SearchFilters): SearchResult {
+  if (filters.municipality && filters.municipality !== "odense") {
+    return {
+      totalHits: 0,
+      listings: [],
+      live: false,
+      source: "Ingen gemt kopi for denne by — henter live",
+      sources: [],
+    };
+  }
   const listings = applyLocalFilters(snapshotListings(), filters);
   return {
     totalHits: listings.length,
@@ -191,13 +207,16 @@ export async function searchBoligsiden(filters: SearchFilters): Promise<SearchRe
     };
   }
 
-  const fallback = applyLocalFilters(snapshotListings(), filters);
+  const fallback = filters.municipality === "odense" ? applyLocalFilters(snapshotListings(), filters) : [];
   return {
     totalHits: fallback.length,
     listings: fallback,
     live: false,
-    source: "Gemt Odense-udsnit (live-kilden er midlertidigt spærret)",
-    sources: ["Boligsiden"],
+    source:
+      filters.municipality === "odense"
+        ? "Gemt Odense-udsnit (live-kilden er midlertidigt spærret)"
+        : "Ingen boliger lige nu — prøv igen om et øjeblik",
+    sources: fallback.length ? ["Boligsiden"] : [],
   };
 }
 

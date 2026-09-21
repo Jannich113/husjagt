@@ -1,4 +1,4 @@
-import type { Listing, ListingDetail } from "./types";
+import type { GeoBounds, Listing, ListingDetail } from "./types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -97,10 +97,7 @@ export function mapDetail(raw: unknown): ListingDetail | null {
   };
 }
 
-export function inBounds(
-  listing: Listing,
-  bounds: { minLon: number; minLat: number; maxLon: number; maxLat: number },
-): boolean {
+export function inBounds(listing: Listing, bounds: GeoBounds): boolean {
   if (listing.lat == null || listing.lon == null) return false;
   return (
     listing.lon >= bounds.minLon &&
@@ -108,4 +105,35 @@ export function inBounds(
     listing.lat >= bounds.minLat &&
     listing.lat <= bounds.maxLat
   );
+}
+
+export function inAnyBox(listing: Listing, boxes: GeoBounds[]): boolean {
+  if (!boxes.length) return true;
+  return boxes.some((box) => inBounds(listing, box));
+}
+
+export function normalizeBox(a: GeoBounds): GeoBounds | null {
+  const minLon = Math.min(a.minLon, a.maxLon);
+  const maxLon = Math.max(a.minLon, a.maxLon);
+  const minLat = Math.min(a.minLat, a.maxLat);
+  const maxLat = Math.max(a.minLat, a.maxLat);
+  if (maxLon - minLon < 0.0004 || maxLat - minLat < 0.0003) return null;
+  return { minLon, minLat, maxLon, maxLat };
+}
+
+export function boxesEqual(a: GeoBounds, b: GeoBounds, eps = 1e-5): boolean {
+  return (
+    Math.abs(a.minLon - b.minLon) < eps &&
+    Math.abs(a.minLat - b.minLat) < eps &&
+    Math.abs(a.maxLon - b.maxLon) < eps &&
+    Math.abs(a.maxLat - b.maxLat) < eps
+  );
+}
+
+export function hasBox(boxes: GeoBounds[], box: GeoBounds): boolean {
+  return boxes.some((row) => boxesEqual(row, box));
+}
+
+export function toggleBox(boxes: GeoBounds[], box: GeoBounds): GeoBounds[] {
+  return hasBox(boxes, box) ? boxes.filter((row) => !boxesEqual(row, box)) : [...boxes, box].slice(0, 8);
 }

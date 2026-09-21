@@ -1,13 +1,15 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Drawer } from "vaul";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { KOMMUNER } from "@/lib/listings/kommuner";
+import { PlacePicker } from "@/components/listings/place-picker";
+import { FilterArea } from "@/components/listings/filter-area";
+import { FilterChip as Chip } from "@/components/listings/filter-chip";
 import { formatMio } from "@/lib/listings/format";
+import type { District } from "@/lib/listings/districts";
 import {
   DEFAULT_FILTERS,
   ENERGY_LABELS,
-  LINK_BOUNDS,
   PROPERTY_TYPES,
   SORT_OPTIONS,
   advancedFilterCount,
@@ -29,26 +31,17 @@ type Props = {
   value: SearchFilters;
   onChange: (next: SearchFilters) => void;
   count: number;
+  catalog?: District[];
 };
 
-export function FilterSheet({ value, onChange, count }: Props) {
+export function FilterSheet({ value, onChange, count, catalog }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
-  const [query, setQuery] = useState("");
   const extra = advancedFilterCount(value);
   const [advanced, setAdvanced] = useState(extra > 0);
 
-  const kommuner = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return KOMMUNER;
-    return KOMMUNER.filter(
-      (k) => k.name.toLowerCase().includes(q) || k.slug.includes(q),
-    );
-  }, [query]);
-
   function openSheet() {
     setDraft(value);
-    setQuery("");
     setAdvanced(advancedFilterCount(value) > 0);
     setOpen(true);
   }
@@ -113,31 +106,7 @@ export function FilterSheet({ value, onChange, count }: Props) {
           </div>
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 pb-4">
             <section>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Kommune</p>
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Søg kommune"
-                className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              />
-              <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-border bg-surface">
-                {kommuner.slice(0, 20).map((k) => (
-                  <button
-                    key={k.slug}
-                    type="button"
-                    onClick={() => {
-                      setDraft((d) => ({ ...d, municipality: k.slug }));
-                      setQuery(k.name);
-                    }}
-                    className={cn(
-                      "flex h-11 w-full items-center px-3 text-left text-sm",
-                      draft.municipality === k.slug ? "bg-primary text-primary-fg" : "hover:bg-sunken",
-                    )}
-                  >
-                    {k.name}
-                  </button>
-                ))}
-              </div>
+              <PlacePicker value={draft} onChange={setDraft} />
             </section>
 
             <section>
@@ -198,25 +167,7 @@ export function FilterSheet({ value, onChange, count }: Props) {
               </div>
             </section>
 
-            <section>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Kortudsnit</p>
-              <button
-                type="button"
-                data-active={draft.bounds != null}
-                onClick={() =>
-                  setDraft((d) => ({
-                    ...d,
-                    bounds: d.bounds ? null : LINK_BOUNDS,
-                  }))
-                }
-                className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-left text-sm data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-fg"
-              >
-                Brug det lille Odense-kortudsnit fra dit link
-              </button>
-              <p className="mt-1.5 text-xs text-faint">
-                Linket pegede på ca. 400 × 700 m. Hele kommunen er valgt som standard, så du ikke lander på et tomt kort.
-              </p>
-            </section>
+            <FilterArea draft={draft} onDraft={setDraft} catalog={catalog} />
 
             <section>
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Nye boliger</p>
@@ -548,26 +499,5 @@ export function FilterSheet({ value, onChange, count }: Props) {
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      data-active={active}
-      onClick={onClick}
-      className="h-11 min-w-11 rounded-full border border-border bg-surface px-3.5 text-sm text-muted data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-fg"
-    >
-      {children}
-    </button>
   );
 }

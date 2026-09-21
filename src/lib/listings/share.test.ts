@@ -44,7 +44,7 @@ describe("hunt URL codec", () => {
       basement: true,
       city: "Aarhus C",
       zipCode: "8000",
-      bounds: LINK_BOUNDS,
+      boxes: [LINK_BOUNDS],
     };
     const hunt = huntFromFilters(filters, "listen");
     const back = filtersFromHunt(hunt);
@@ -57,7 +57,7 @@ describe("hunt URL codec", () => {
     assert.equal(back.basement, true);
     assert.equal(back.city, "Aarhus C");
     assert.equal(back.zipCode, "8000");
-    assert.ok(back.bounds);
+    assert.equal(back.boxes.length, 1);
     assert.equal(hunt.view, "lyt");
     assert.equal(hunt.t, "lejlighed,andel");
   });
@@ -85,6 +85,15 @@ describe("hunt URL codec", () => {
     assert.deepEqual(filters.energyLabels, ["A", "B", "C"]);
     assert.equal(filters.basement, true);
     assert.equal(viewFromHunt(hunt), "listen");
+  });
+
+  it("roundtrips kolonihave as its own type", () => {
+    const filters = { ...DEFAULT_FILTERS, types: ["full year allotment garden"] };
+    const hunt = huntFromFilters(filters, "list");
+    assert.equal(hunt.t, "koloni");
+    assert.deepEqual(filtersFromHunt(parseHuntSearch({ t: "kolonihave" })).types, [
+      "full year allotment garden",
+    ]);
   });
 
   it("keeps hunt paths on a published origin and flags preview hosts as private", () => {

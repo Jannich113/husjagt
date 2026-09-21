@@ -107,6 +107,11 @@ export function extraFilterLabels(filters: SearchFilters): string[] {
   if (filters.terrace) labels.push("terrasse");
   if (filters.elevator) labels.push("elevator");
   if (filters.priceDropOnly) labels.push("prisfald");
-  if (filters.bounds) labels.push("kortudsnit");
+  if (filters.districts?.length) {
+    labels.push(filters.districts.length === 1 ? "1 bydel" : `${filters.districts.length} bydele`);
+  }
+  if (filters.boxes?.length) {
+    labels.push(filters.boxes.length === 1 ? "1 kortudsnit" : `${filters.boxes.length} kortudsnit`);
+  }
   return labels;
 }
