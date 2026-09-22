@@ -1,11 +1,15 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate } from "@tanstack/react-router";
+import { KONTO_COPY, type KontoNeed } from "@/lib/account/gate";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
-import { RedirectToSignIn } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
-export function LoginForm() {
+export function LoginForm({ need }: { need?: KontoNeed }) {
   const { user, isPending } = useCurrentUserState();
+  const copy = need ? KONTO_COPY[need] : {
+    title: "Opret konto",
+    text: "Kun hvis du vil overvåge, gemme noter eller styre forbindelser. Ellers kan du jage uden konto — så gemmes de ting ikke.",
+  };
   const [mode, setMode] = useState<"signup" | "signin">("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -48,12 +52,8 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">Husjagt</p>
-      <h1 className="mt-2 font-display text-4xl">{mode === "signup" ? "Opret konto" : "Log ind"}</h1>
-      <p className="mt-2 text-sm text-muted">
-        {mode === "signup"
-          ? "En konto gemmer dine hjerter, noter og overvågninger på sitet."
-          : "Velkommen tilbage. Data følger kontoen, ikke kun telefonen."}
-      </p>
+      <h1 className="mt-2 font-display text-4xl">{mode === "signup" ? copy.title : "Log ind"}</h1>
+      <p className="mt-2 text-sm text-muted">{copy.text}</p>
 
       <form onSubmit={(event) => void submit(event)} className="mt-6 space-y-3">
         {mode === "signup" ? (
@@ -108,6 +108,10 @@ export function LoginForm() {
         {mode === "signup" ? "Har du allerede en konto? Log ind" : "Ny her? Opret konto"}
       </button>
 
+      <a href="/" className="mt-2 flex h-11 items-center justify-center text-sm text-muted">
+        Fortsæt uden konto
+      </a>
+
       <div className="mt-8 border-t border-border pt-5">
         <p className="mb-3 text-center text-xs uppercase tracking-wider text-muted">Eller</p>
         <div className="flex flex-col gap-2">
@@ -134,17 +138,4 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <div className="mt-1">{children}</div>
     </label>
   );
-}
-
-export function RequireAccount({ children }: { children: ReactNode }) {
-  const { user, isPending } = useCurrentUserState();
-  if (isPending) {
-    return (
-      <div className="grid min-h-dvh place-items-center bg-bg">
-        <p className="text-sm text-muted">Tjekker konto…</p>
-      </div>
-    );
-  }
-  if (!user) return <RedirectToSignIn />;
-  return <>{children}</>;
 }

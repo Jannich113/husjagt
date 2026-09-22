@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { useKonto } from "@/lib/account/use-konto";
 import { moduleOn } from "@/lib/hunt/modules";
 import { placeLabel } from "@/lib/listings/place";
 import {
@@ -25,6 +26,7 @@ export function WatchSearchButton({
   const clearNew = useSearchAlerts((s) => s.clearNew);
   const notify = useSearchAlerts((s) => s.notify);
   const setNotify = useSearchAlerts((s) => s.setNotify);
+  const { signedIn, requireKonto } = useKonto();
   if (!moduleOn("searchAlerts")) return null;
 
   const same = Boolean(watched && searchFingerprint(watched) === searchFingerprint(filters));
@@ -41,6 +43,10 @@ export function WatchSearchButton({
       <button
         type="button"
         onClick={() => {
+          if (!signedIn) {
+            requireKonto("overvaag");
+            return;
+          }
           if (!enabled) {
             watch(filters, ids);
             void enablePush();

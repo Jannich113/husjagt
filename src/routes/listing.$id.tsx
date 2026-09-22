@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { RequireAccount } from "@/components/account/login-form";
 import { useEffect } from "react";
 import { HouseDetail } from "@/components/listings/house-detail";
 import { useFirstSeen } from "@/lib/listings/fresh";
@@ -61,9 +60,5 @@ function ListingPage() {
     );
   }
 
-  return (
-    <RequireAccount>
-      <HouseDetail listing={listing} onBack={goBack} />
-    </RequireAccount>
-  );
+  return <HouseDetail listing={listing} onBack={goBack} />;
 }

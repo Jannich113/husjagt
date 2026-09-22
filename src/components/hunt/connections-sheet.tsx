@@ -1,6 +1,7 @@
 import { KeyRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Drawer } from "vaul";
+import { useKonto } from "@/lib/account/use-konto";
 import { moduleOn } from "@/lib/hunt/modules";
 import { exchangeOAuthCode } from "@/lib/oauth/exchange";
 import { startOAuth } from "@/lib/oauth/flow";
@@ -19,6 +20,7 @@ export function ConnectionsSheet() {
   const takePending = useOAuth((s) => s.takePending);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { signedIn, requireKonto } = useKonto();
   const redirect = typeof window !== "undefined" ? oauthRedirectUri() : "/oauth/callback";
 
   useEffect(() => {
@@ -73,6 +75,18 @@ export function ConnectionsSheet() {
   }, [takePending, upsert]);
 
   if (!moduleOn("oauth")) return null;
+  if (!signedIn) {
+    return (
+      <button
+        type="button"
+        className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm"
+        onClick={() => requireKonto("konti")}
+      >
+        <KeyRound className="size-4" />
+        Konto
+      </button>
+    );
+  }
   const connected = connections.length;
 
   return (
