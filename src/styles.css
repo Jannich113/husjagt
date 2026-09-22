@@ -612,8 +612,13 @@
   scrollbar-width: none;
 }
 
-.reel-rail::-webkit-scrollbar {
+.reel-rail::-webkit-scrollbar,
+.hunt-gallery::-webkit-scrollbar {
   display: none;
+}
+
+.hunt-gallery {
+  scrollbar-width: none;
 }
 
 @keyframes reelKen {

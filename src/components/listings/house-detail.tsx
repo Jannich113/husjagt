@@ -1,7 +1,8 @@
 import { ArrowLeft, ExternalLink, Heart, MapPin } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { HighlightText } from "@/components/listings/highlight-text";
+import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,19 @@ import {
 } from "@/lib/listings/format";
 import { matchedKeywords, useKeywords } from "@/lib/listings/keywords";
 import { listingShareCopy } from "@/lib/listings/share";
+import { getListing } from "@/lib/listings/search";
 import { externalLinkProps } from "@/lib/pwa/outbound";
 import type { Listing, ListingDetail } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 
 type House = Listing & Partial<ListingDetail>;
+
+function listingPhotos(listing: House): string[] {
+  const urls = listing.images?.filter(Boolean) ?? [];
+  const cover = listing.image;
+  if (cover && !urls.includes(cover)) return [cover, ...urls];
+  return urls.length ? urls : cover ? [cover] : [];
+}
 
 export function HouseDetail({
   listing,
@@ -41,9 +50,32 @@ export function HouseDetail({
   const freshText = freshnessLabel(fresh);
   const share = useMemo(() => listingShareCopy(listing), [listing]);
   const href = listing.caseUrl || boligsidenUrl(listing.slugAddress || listing.slug);
-  const photos = listing.images?.length ? listing.images : listing.image ? [listing.image] : [];
+  const seed = useMemo(() => listingPhotos(listing), [listing]);
+  const [photos, setPhotos] = useState(seed);
   const keywordWords = useKeywords((s) => s.words);
   const keywordHits = moduleOn("keywords") ? matchedKeywords(listing, keywordWords) : [];
+
+  useEffect(() => {
+    setPhotos(seed);
+  }, [seed]);
+
+  useEffect(() => {
+    if (!moduleOn("photoGallery")) return;
+    if ((listing.images?.length ?? 0) >= 2) return;
+    let alive = true;
+    void getListing({ data: { id: listing.id } })
+      .then((detail) => {
+        if (!alive || !detail) return;
+        const next = listingPhotos(detail);
+        if (next.length) setPhotos(next);
+      })
+      .catch(() => {
+        /* cover stays */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [listing.id, listing.images?.length]);
 
   return (
     <main className={cn("mx-auto bg-bg pb-16", embedded ? "max-w-none" : "min-h-dvh max-w-3xl")}>
@@ -87,13 +119,17 @@ export function HouseDetail({
         </div>
       </div>
 
-      <div className="h-64 w-full bg-sunken sm:h-80">
-        <ListingPhoto
-          src={photos[0] ?? listing.image}
-          alt={listing.imageAlt ?? listing.street}
-          className="h-64 w-full object-cover sm:h-80"
-        />
-      </div>
+      {moduleOn("photoGallery") ? (
+        <PhotoGallery urls={photos} alt={listing.imageAlt ?? listing.street} />
+      ) : (
+        <div className="h-64 w-full bg-sunken sm:h-80">
+          <ListingPhoto
+            src={photos[0] ?? listing.image}
+            alt={listing.imageAlt ?? listing.street}
+            className="h-64 w-full object-cover sm:h-80"
+          />
+        </div>
+      )}
 
       <div className="px-5 pt-5">
         {embedded ? null : (

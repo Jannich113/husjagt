@@ -213,6 +213,7 @@ export type Listing = {
   caseUrl: string | null;
   descriptionTitle?: string | null;
   descriptionBody?: string | null;
+  images?: string[];
 };
 
 export type ListingDetail = Listing & {

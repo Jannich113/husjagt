@@ -16,23 +16,28 @@ function str(value: unknown): string | null {
 
 function firstImage(node: unknown): { url: string | null; alt: string | null } {
   const rec = asRecord(node);
-  const sources = rec?.imageSources;
+  if (!rec) return { url: str(node), alt: null };
+  const sources = rec.imageSources;
   if (Array.isArray(sources) && sources.length > 0) {
-    const first = asRecord(sources[0]);
-    return { url: str(first?.url), alt: str(first?.alt) };
+    const preferred =
+      sources
+        .map((row) => asRecord(row))
+        .find((row) => str(row?.url)?.includes("/600x400/")) ?? asRecord(sources.at(-1));
+    return { url: str(preferred?.url) ?? str(asRecord(sources[0])?.url), alt: str(preferred?.alt) };
   }
-  return { url: str(rec?.url), alt: str(rec?.alt) };
+  return { url: str(rec.url) ?? str(rec.src) ?? str(rec.href), alt: str(rec.alt) };
 }
 
-function collectImages(raw: UnknownRecord): string[] {
+export function collectImages(raw: UnknownRecord): string[] {
   const urls: string[] = [];
   const push = (url: string | null) => {
     if (url && !urls.includes(url)) urls.push(url);
   };
   push(firstImage(raw.image).url);
   push(firstImage(raw.defaultImage).url);
-  const images = raw.images;
-  if (Array.isArray(images)) {
+  for (const key of ["images", "caseImages", "pictures", "photos", "media", "gallery"]) {
+    const images = raw[key];
+    if (!Array.isArray(images)) continue;
     for (const img of images) push(firstImage(img).url);
   }
   return urls;
@@ -81,6 +86,7 @@ export function mapListing(raw: unknown, source: Listing["source"] = "boligsiden
     caseUrl: str(rec.caseUrl),
     descriptionTitle: str(rec.descriptionTitle),
     descriptionBody: str(rec.descriptionBody),
+    images: collectImages(rec),
   };
 }
 
