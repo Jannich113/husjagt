@@ -4,6 +4,7 @@ import { EMPTY_SEARCH } from "@/lib/hunt/ports";
 import { visibleListings } from "@/lib/hunt/visible";
 import { appendSearchPage } from "@/lib/listings/aggregate";
 import { useFavorites } from "@/lib/listings/favorites";
+import { useHidden } from "@/lib/listings/hidden";
 import { useFirstSeen } from "@/lib/listings/fresh";
 import { useKeywords } from "@/lib/listings/keywords";
 import { placeLabel } from "@/lib/listings/place";
@@ -67,10 +68,14 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [areaDistricts, setAreaDistricts] = useState<District[]>(() => districtsForKommune("odense"));
   const [placeView, setPlaceView] = useState<KommuneView | null>(null);
   const [reelFocus, setReelFocus] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
   const savedIds = useFavorites((s) => s.ids);
   const savedMap = useFavorites((s) => s.items);
   const hydrate = useFavorites((s) => s.hydrate);
   const hydrateSeen = useSeen((s) => s.hydrate);
+  const hydrateHidden = useHidden((s) => s.hydrate);
+  const hiddenIds = useHidden((s) => s.ids);
+  const clearHidden = useHidden((s) => s.clear);
   const markSeen = useSeen((s) => s.mark);
   const hydrateFirstSeen = useFirstSeen((s) => s.hydrate);
   const rememberFirstSeen = useFirstSeen((s) => s.remember);
@@ -91,12 +96,13 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   useEffect(() => {
     hydrate();
     hydrateSeen();
+    hydrateHidden();
     hydrateFirstSeen();
     hydrateWatch();
     hydrateKeywords();
     document.body.style.removeProperty("pointer-events");
     document.body.style.removeProperty("overflow");
-  }, [hydrate, hydrateSeen, hydrateFirstSeen, hydrateWatch, hydrateKeywords]);
+  }, [hydrate, hydrateSeen, hydrateHidden, hydrateFirstSeen, hydrateWatch, hydrateKeywords]);
 
   useEffect(() => {
     rememberHunt(hunt);
@@ -238,8 +244,10 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         keywordMode,
         sortBy: filters.sortBy,
         sortAscending: filters.sortAscending,
+        hiddenIds,
+        showHidden,
       }),
-    [pool, filters.freshOnly, filters.sortBy, filters.sortAscending, firstSeenAt, streetQuery, keywordWords, keywordMode],
+    [pool, filters.freshOnly, filters.sortBy, filters.sortAscending, firstSeenAt, streetQuery, keywordWords, keywordMode, hiddenIds, showHidden],
   );
   const typeSummary = useMemo(() => filters.types.map(typeLabel).join(", "), [filters.types]);
   const extras = useMemo(() => extraFilterLabels(filters), [filters]);
@@ -266,6 +274,10 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     const missing = result.listings.filter((row) => row.days == null).map((row) => row.id);
     if (missing.length) rememberFirstSeen(missing);
   }, [result.listings, rememberFirstSeen]);
+
+  useEffect(() => {
+    if (openListing && hiddenIds.includes(openListing.id) && !showHidden) setOpenListing(null);
+  }, [hiddenIds, openListing, showHidden]);
 
   useEffect(() => {
     setListenAll(false);
@@ -301,6 +313,13 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         onStreetQuery={applyStreet}
         filtersOpen={filtersOpen}
         onFiltersOpenChange={setFiltersOpen}
+        hiddenCount={hiddenIds.length}
+        showHidden={showHidden}
+        onToggleHidden={() => setShowHidden((value) => !value)}
+        onClearHidden={() => {
+          clearHidden();
+          setShowHidden(false);
+        }}
       />
 
       <div className="hunt-body">

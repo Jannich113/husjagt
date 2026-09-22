@@ -33,6 +33,10 @@ export function HuntHeader({
   onStreetQuery,
   filtersOpen,
   onFiltersOpenChange,
+  hiddenCount = 0,
+  showHidden = false,
+  onToggleHidden,
+  onClearHidden,
 }: {
   view: HuntView;
   filters: SearchFilters;
@@ -53,6 +57,10 @@ export function HuntHeader({
   onStreetQuery: (next: string) => void;
   filtersOpen?: boolean;
   onFiltersOpenChange?: (open: boolean) => void;
+  hiddenCount?: number;
+  showHidden?: boolean;
+  onToggleHidden?: () => void;
+  onClearHidden?: () => void;
 }) {
   const [areaOpen, setAreaOpen] = useState(false);
   const areaBits = [placeLabel(filters), streetQuery || null, extras[0] ?? null].filter(Boolean);
@@ -136,6 +144,29 @@ export function HuntHeader({
           ) : null}
         </div>
         <p className="text-sm tabular-nums text-muted">{countLabel}</p>
+        {moduleOn("dismiss") && hiddenCount > 0 && view !== "listen" ? (
+          <>
+            <button
+              type="button"
+              onClick={onToggleHidden}
+              className={cn(
+                "h-8 rounded-full border px-3 text-xs font-medium",
+                showHidden ? "border-primary bg-primary text-primary-fg" : "border-border bg-surface text-fg",
+              )}
+            >
+              {showHidden ? "Skjul igen" : `Vis skjulte (${hiddenCount})`}
+            </button>
+            {showHidden ? (
+              <button
+                type="button"
+                onClick={onClearHidden}
+                className="h-8 rounded-full border border-border bg-surface px-3 text-xs font-medium"
+              >
+                Gendan alle
+              </button>
+            ) : null}
+          </>
+        ) : null}
         {view === "listen" ? (
           <ListenAllButton
             showAll={listenAll}

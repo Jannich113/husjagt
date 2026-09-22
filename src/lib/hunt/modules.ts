@@ -13,6 +13,7 @@ export const HUNT_MODULES = {
   streetSearch: { enabled: true, label: "Søg på vej og adresse" },
   keywords: { enabled: true, label: "Nøgleord i teksten" },
   photoGallery: { enabled: true, label: "Fotogalleri på boligen" },
+  dismiss: { enabled: true, label: "Skjul boliger" },
 } as const;
 
 export type HuntModuleId = keyof typeof HUNT_MODULES;

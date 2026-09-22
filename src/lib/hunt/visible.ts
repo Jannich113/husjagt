@@ -13,6 +13,8 @@ export function visibleListings({
   keywordMode,
   sortBy,
   sortAscending,
+  hiddenIds = [],
+  showHidden = false,
 }: {
   pool: Listing[];
   freshOnly: boolean;
@@ -22,8 +24,14 @@ export function visibleListings({
   keywordMode: KeywordMode;
   sortBy: SortKey;
   sortAscending: boolean;
+  hiddenIds?: string[];
+  showHidden?: boolean;
 }): Listing[] {
   let rows = pool;
+  if (hiddenIds.length && !showHidden) {
+    const hidden = new Set(hiddenIds);
+    rows = rows.filter((row) => !hidden.has(row.id));
+  }
   if (freshOnly) {
     rows = rows.filter((row) => listingFreshness(row, firstSeenAt[row.id]) != null);
   }

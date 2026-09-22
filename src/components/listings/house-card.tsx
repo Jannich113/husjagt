@@ -1,8 +1,9 @@
-import { Heart, MapPin } from "lucide-react";
+import { EyeOff, Heart, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { useFavorites } from "@/lib/listings/favorites";
+import { useHidden } from "@/lib/listings/hidden";
 import { formatDays, formatKr, formatM2, formatRooms, sourceLabel, typeLabel } from "@/lib/listings/format";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import { matchedKeywords, useKeywords } from "@/lib/listings/keywords";
@@ -68,6 +69,9 @@ export function HouseCard({
 }) {
   const saved = useFavorites((s) => s.ids.includes(listing.id));
   const toggle = useFavorites((s) => s.toggle);
+  const hidden = useHidden((s) => s.ids.includes(listing.id));
+  const hide = useHidden((s) => s.hide);
+  const unhide = useHidden((s) => s.unhide);
   const unseen = useSeen((s) => s.ready && !s.ids.includes(listing.id));
   const firstSeenAt = useFirstSeen((s) => s.seenAt[listing.id]);
   const fresh = listingFreshness(listing, firstSeenAt);
@@ -124,6 +128,7 @@ export function HouseCard({
               ) : null}
             </div>
           </button>
+          <div className="flex shrink-0 flex-col">
           <button
             type="button"
             aria-label={saved ? "Fjern fra gemte" : "Gem bolig"}
@@ -135,6 +140,20 @@ export function HouseCard({
           >
             <Heart className={cn("size-5", saved && "fill-current")} />
           </button>
+          {moduleOn("dismiss") ? (
+            <button
+              type="button"
+              aria-label={hidden ? "Gendan bolig" : "Skjul bolig"}
+              onClick={() => (hidden ? unhide(listing.id) : hide(listing.id))}
+              className={cn(
+                "flex size-11 items-center justify-center rounded-full border border-border",
+                hidden ? "bg-sunken text-fg" : "bg-surface text-muted",
+              )}
+            >
+              <EyeOff className="size-5" />
+            </button>
+          ) : null}
+          </div>
         </div>
       </article>
     );
@@ -212,12 +231,25 @@ export function HouseCard({
           aria-label={saved ? "Fjern fra gemte" : "Gem bolig"}
           onClick={() => toggle(listing)}
           className={cn(
-            "mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full border border-border",
+            "flex size-11 shrink-0 items-center justify-center rounded-full border border-border",
             saved ? "bg-heart text-primary-fg" : "bg-surface text-muted",
           )}
         >
           <Heart className={cn("size-5", saved && "fill-current")} />
         </button>
+        {moduleOn("dismiss") ? (
+          <button
+            type="button"
+            aria-label={hidden ? "Gendan bolig" : "Skjul bolig"}
+            onClick={() => (hidden ? unhide(listing.id) : hide(listing.id))}
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center rounded-full border border-border",
+              hidden ? "bg-sunken text-fg" : "bg-surface text-muted",
+            )}
+          >
+            <EyeOff className="size-5" />
+          </button>
+        ) : null}
       </div>
     </article>
   );

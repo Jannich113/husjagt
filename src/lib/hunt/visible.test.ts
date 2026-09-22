@@ -88,5 +88,36 @@ describe("visibleListings", () => {
       ["other", "close"],
     );
   });
+
+  it("drops hidden houses until vis skjulte is on", () => {
+    const hidden = visibleListings({
+      pool: [other, close],
+      freshOnly: false,
+      firstSeenAt: {},
+      streetQuery: "",
+      keywords: [],
+      keywordMode: "any",
+      sortBy: "price",
+      sortAscending: true,
+      hiddenIds: ["close"],
+    });
+    assert.deepEqual(
+      hidden.map((row) => row.id),
+      ["other"],
+    );
+    const shown = visibleListings({
+      pool: [other, close],
+      freshOnly: false,
+      firstSeenAt: {},
+      streetQuery: "",
+      keywords: [],
+      keywordMode: "any",
+      sortBy: "price",
+      sortAscending: true,
+      hiddenIds: ["close"],
+      showHidden: true,
+    });
+    assert.equal(shown.length, 2);
+  });
 });
 

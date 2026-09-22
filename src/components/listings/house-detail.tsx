@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Heart, MapPin } from "lucide-react";
+import { ArrowLeft, EyeOff, ExternalLink, Heart, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { HighlightText } from "@/components/listings/highlight-text";
@@ -8,6 +8,7 @@ import { ShareButton } from "@/components/listings/share-button";
 import { Button } from "@/components/ui/button";
 import { moduleOn } from "@/lib/hunt/modules";
 import { useFavorites } from "@/lib/listings/favorites";
+import { useHidden } from "@/lib/listings/hidden";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import {
   agencyChain,
@@ -45,6 +46,9 @@ export function HouseDetail({
 }) {
   const saved = useFavorites((s) => s.ids.includes(listing.id));
   const toggle = useFavorites((s) => s.toggle);
+  const hidden = useHidden((s) => s.ids.includes(listing.id));
+  const hide = useHidden((s) => s.hide);
+  const unhide = useHidden((s) => s.unhide);
   const firstSeenAt = useFirstSeen((s) => s.seenAt[listing.id]);
   const fresh = listingFreshness(listing, firstSeenAt);
   const freshText = freshnessLabel(fresh);
@@ -116,6 +120,22 @@ export function HouseDetail({
           >
             <Heart className={cn("size-5", saved && "fill-current")} />
           </button>
+          {moduleOn("dismiss") ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (hidden) unhide(listing.id);
+                else {
+                  hide(listing.id);
+                  onBack();
+                }
+              }}
+              className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-muted"
+              aria-label={hidden ? "Gendan bolig" : "Skjul bolig"}
+            >
+              <EyeOff className="size-5" />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -205,6 +225,21 @@ export function HouseDetail({
           </Button>
           <ShareButton title={share.title} text={share.text} url={share.url} label="Del bolig" />
         </div>
+        {moduleOn("dismiss") ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (hidden) unhide(listing.id);
+              else {
+                hide(listing.id);
+                onBack();
+              }
+            }}
+            className="mt-3 w-full rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium"
+          >
+            {hidden ? "Gendan bolig" : "Skjul bolig"}
+          </button>
+        ) : null}
       </div>
     </main>
   );
