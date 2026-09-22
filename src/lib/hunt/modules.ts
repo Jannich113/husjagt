@@ -17,6 +17,7 @@ export const HUNT_MODULES = {
   notes: { enabled: true, label: "Noter på gemte boliger" },
   searchAlerts: { enabled: true, label: "Overvåg søgning" },
   priceHistory: { enabled: true, label: "Prishistorik" },
+  oauth: { enabled: true, label: "OAuth-forbindelser" },
 } as const;
 
 export type HuntModuleId = keyof typeof HUNT_MODULES;

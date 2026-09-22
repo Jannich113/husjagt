@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { ListenAllButton } from "./listen-view";
 import { ViewTab } from "./view-tab";
 import { WatchSearchButton } from "./watch-search";
+import { ConnectionsSheet } from "./connections-sheet";
 
 export function HuntHeader({
   view,
@@ -86,6 +87,7 @@ export function HuntHeader({
             label="Del"
             className="h-9 flex-none px-3.5 text-sm"
           />
+          <ConnectionsSheet />
           {view !== "listen" ? <SortMenu value={filters} onChange={onApply} /> : null}
           <FilterSheet
             value={filters}

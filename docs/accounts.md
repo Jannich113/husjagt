@@ -16,7 +16,7 @@ Everything personal lives in the browser:
 | `husjagt-search-alerts` | Watched hunt + known case ids |
 | `husjagt-keywords` | Keyword watchlist |
 | `husjagt-social-watch` | Lyt accounts / tags |
-| `husjagt-offline-search` | Last listings cache |
+| `husjagt-oauth` | OAuth2 connections (access/refresh tokens, device-only) |
 
 No Husjagt account. No server copy. Clearing site data wipes the hunt. Two phones are two separate hunts.
 
@@ -68,6 +68,19 @@ Operator secrets for the *app itself* (VAPID private key, `DATABASE_URL`, GitHub
 | **ACC-7** | Revisit #29: connect portal → deep-link or real API only. | After ACC-3 |
 
 Start at **ACC-1**. It is useful even if we never sign in, and it is the backup if a phone dies.
+
+## OAuth 2.0 (ACC-3 slice)
+
+Husjagt does **not** use the Grok/Melvin broker for this. Users bring their own OAuth client (Google / GitHub / X).
+
+- Authorization Code + PKCE in the browser
+- `/oauth/callback` returns the `code` to the opener
+- Our server only **relays** the token request (avoids CORS); it does not store tokens
+- Tokens land in `husjagt-oauth` on the device (class C, still plaintext in localStorage until ACC-6 encryption)
+- Redirect URI to register at the provider: `{origin}/oauth/callback`
+- Boligsiden / Boliga / DBA have **no** public OAuth; they stay out of the provider list
+
+UI: **Konti** in the header.
 
 ## #29 (seller chat) after this
 
