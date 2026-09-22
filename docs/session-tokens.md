@@ -63,6 +63,6 @@ Signed snapshot of the session. If you swap identity, the gate plugin expires th
 5. Do not turn off `trustedOrigins`, `__Host-`, or Fetch-Metadata isolation.
 6. XSS is the remaining session-class bug class — treat any HTML injection as a session incident.
 
-## Later (ACC-6)
+JWT signature attacks (alg=none, HMAC confusion): [jwt-signatures.md](jwt-signatures.md).
 
 Wrap class-C vault with WebCrypto (DEK from passkey PRF or account password). Until then, portal OAuth is “device local, XSS-visible”.
