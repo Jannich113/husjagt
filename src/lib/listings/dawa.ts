@@ -2,6 +2,7 @@ import type { District, DistrictGeometry, LngLat } from "./districts";
 import { districtIdFor } from "./districts";
 import type { HuntPlace } from "./place";
 import { kommuneSlugFromDawa, pickKommuneFromDawa } from "./place";
+import type { KommuneView } from "./kommune-view";
 import type { GeoBounds } from "./types";
 
 export const DAWA = "https://api.dataforsyningen.dk";
@@ -149,6 +150,40 @@ export function districtsFromGeoJson(payload: unknown): District[] {
     });
   }
   return rows.sort((a, b) => a.zip.localeCompare(b.zip, "da"));
+}
+
+export function kommuneViewFromGeoJson(slug: string, payload: unknown): KommuneView | null {
+  if (!payload || typeof payload !== "object") return null;
+  const rec = payload as Record<string, unknown>;
+  const feature =
+    rec.type === "Feature"
+      ? rec
+      : Array.isArray(rec.features)
+        ? (rec.features[0] as Record<string, unknown> | undefined)
+        : rec;
+  if (!feature) return null;
+  const props = (feature.properties as Record<string, unknown> | undefined) ?? rec;
+  const geomRaw = (feature.geometry as { type?: string; coordinates?: unknown } | undefined) ?? undefined;
+  const geometry = geomRaw ? simplifyGeometry(geomRaw, 0.0018) : null;
+  const bbox = Array.isArray(feature.bbox) ? feature.bbox : rec.bbox;
+  let bounds: GeoBounds | null = null;
+  if (Array.isArray(bbox) && bbox.length >= 4) {
+    const minLon = Number(bbox[0]);
+    const minLat = Number(bbox[1]);
+    const maxLon = Number(bbox[2]);
+    const maxLat = Number(bbox[3]);
+    if ([minLon, minLat, maxLon, maxLat].every(Number.isFinite)) {
+      bounds = { minLon, minLat, maxLon, maxLat };
+    }
+  } else if (geometry) {
+    bounds = boundsOf(geometry);
+  }
+  const vc = Array.isArray(props.visueltcenter) ? props.visueltcenter : rec.visueltcenter;
+  const center = asLngLat(vc);
+  const lat = center ? center[1] : bounds ? (bounds.minLat + bounds.maxLat) / 2 : NaN;
+  const lon = center ? center[0] : bounds ? (bounds.minLon + bounds.maxLon) / 2 : NaN;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { slug, lat, lon, bounds, geometry };
 }
 
 export function parsePostHints(payload: unknown): DawaPostHint[] {

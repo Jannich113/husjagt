@@ -28,6 +28,12 @@ type Props = {
 
 type PinKind = "liked" | "seen" | "unseen";
 
+const KOMMUNE_STYLE: L.PathOptions = {
+  color: "#2c4a3e",
+  weight: 2.5,
+  fillColor: "#2c4a3e",
+  fillOpacity: 0.07,
+};
 const BOX_STYLE: L.PolylineOptions = {
   color: "#2c4a3e",
   weight: 2,
@@ -189,6 +195,12 @@ export function ListingMap({
     const group = areaRef.current;
     if (!map || !group) return;
     group.clearLayers();
+    if (focus?.geometry) {
+      L.geoJSON(focus.geometry as GeoJSON.GeoJsonObject, {
+        style: KOMMUNE_STYLE,
+        interactive: false,
+      }).addTo(group);
+    }
     boxes.forEach((box, index) => {
       const rect = L.rectangle(leafletBox(box), { ...BOX_STYLE, interactive: !drawMode });
       rect.bindTooltip(`Område ${index + 1} · tryk for at fjerne`, { sticky: true });
@@ -233,7 +245,7 @@ export function ListingMap({
         label.addTo(group);
       }
     }
-  }, [boxes, districts, named, pickDistricts, drawMode]);
+  }, [boxes, districts, named, pickDistricts, drawMode, focus, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -3,6 +3,7 @@ import { rememberDistricts, type District } from "./districts";
 import {
   DAWA,
   districtsFromGeoJson,
+  kommuneViewFromGeoJson,
   mergePlaceHits,
   parsePostHints,
   placesFromKommunerAutocomplete,
@@ -53,8 +54,15 @@ export async function fetchKommuneView(slug: string): Promise<KommuneView | null
     return null;
   }
   const code = String(kommune.code).padStart(4, "0");
+  const geo = await dawaJson(`/kommuner/${code}?format=geojson`);
+  const fromGeo = kommuneViewFromGeoJson(slug, geo);
+  if (fromGeo?.geometry) {
+    viewCache.set(slug, fromGeo);
+    return fromGeo;
+  }
   const payload = await dawaJson(`/kommuner/${code}`);
   const view = kommuneViewFromDawa(slug, payload);
+  if (view && fromGeo?.geometry) view.geometry = fromGeo.geometry;
   viewCache.set(slug, view);
   return view;
 }

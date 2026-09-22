@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { districtsFromGeoJson, parsePostHints, simplifyRing } from "./dawa.ts";
+import { districtsFromGeoJson, kommuneViewFromGeoJson, parsePostHints, simplifyRing } from "./dawa.ts";
 import { districtIdFor } from "./districts.ts";
 
 describe("DAWA helpers", () => {
@@ -61,5 +61,27 @@ describe("DAWA helpers", () => {
       { tekst: "junk" },
     ]);
     assert.deepEqual(rows, [{ nr: "5000", navn: "Odense C", tekst: "5000 Odense C" }]);
+  });
+
+  it("reads a kommune polygon from DAWA geojson", () => {
+    const view = kommuneViewFromGeoJson("billund", {
+      type: "Feature",
+      bbox: [8.8, 55.6, 9.2, 55.9],
+      properties: { kode: "0530", navn: "Billund" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [8.8, 55.6],
+          [9.2, 55.6],
+          [9.2, 55.9],
+          [8.8, 55.9],
+          [8.8, 55.6],
+        ]],
+      },
+    });
+    assert.equal(view?.slug, "billund");
+    assert.equal(view?.geometry?.type, "Polygon");
+    assert.ok((view?.geometry?.coordinates[0]?.length ?? 0) >= 4);
+    assert.equal(view?.bounds?.minLon, 8.8);
   });
 });

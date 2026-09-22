@@ -1,3 +1,4 @@
+import type { DistrictGeometry } from "./districts";
 import type { GeoBounds } from "./types";
 
 export type KommuneView = {
@@ -5,6 +6,7 @@ export type KommuneView = {
   lat: number;
   lon: number;
   bounds: GeoBounds | null;
+  geometry: DistrictGeometry | null;
 };
 
 export type MapCamera =
@@ -36,7 +38,7 @@ export function kommuneViewFromDawa(slug: string, payload: unknown): KommuneView
       bounds = { minLon, minLat, maxLon, maxLat };
     }
   }
-  return { slug, lon: center[0], lat: center[1], bounds };
+  return { slug, lon: center[0], lat: center[1], bounds, geometry: null };
 }
 
 export function unionGeoBounds(boxes: GeoBounds[]): GeoBounds | null {
