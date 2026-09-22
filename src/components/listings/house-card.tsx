@@ -69,6 +69,7 @@ export function HouseCard({
 }) {
   const saved = useFavorites((s) => s.ids.includes(listing.id));
   const toggle = useFavorites((s) => s.toggle);
+  const note = useFavorites((s) => s.notes[listing.id]);
   const hidden = useHidden((s) => s.ids.includes(listing.id));
   const hide = useHidden((s) => s.hide);
   const unhide = useHidden((s) => s.unhide);
@@ -126,6 +127,7 @@ export function HouseCard({
                   ))}
                 </p>
               ) : null}
+              {moduleOn("notes") && note ? <p className="mt-1 truncate text-xs text-muted">{note}</p> : null}
             </div>
           </button>
           <div className="flex shrink-0 flex-col">
@@ -225,6 +227,7 @@ export function HouseCard({
               ))}
             </p>
           ) : null}
+          {moduleOn("notes") && note ? <p className="mt-2 truncate text-xs text-muted">{note}</p> : null}
         </button>
         <button
           type="button"

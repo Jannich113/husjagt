@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { HighlightText } from "@/components/listings/highlight-text";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
+import { SavedNote } from "@/components/listings/saved-note";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
 import { Button } from "@/components/ui/button";
@@ -209,6 +210,8 @@ export function HouseDetail({
             ) : null}
           </section>
         ) : null}
+
+        <SavedNote id={listing.id} saved={saved} />
 
         <section className="mt-8 rounded-xl border border-border bg-surface p-4">
           <p className="text-xs uppercase tracking-wider text-muted">Mægler</p>

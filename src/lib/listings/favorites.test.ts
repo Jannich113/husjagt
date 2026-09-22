@@ -22,7 +22,7 @@ beforeEach(() => {
     },
   };
   Object.defineProperty(globalThis, "localStorage", { value: memory, configurable: true });
-  useFavorites.setState({ ids: [], items: {}, ready: false });
+  useFavorites.setState({ ids: [], items: {}, notes: {}, ready: false });
 });
 
 function house(id: string, street: string): Listing {
@@ -62,7 +62,7 @@ describe("favorites persist", () => {
     assert.equal(useFavorites.getState().has("abc"), true);
     assert.equal(useFavorites.getState().items.abc?.street, "Aavej 3");
 
-    useFavorites.setState({ ids: [], items: {}, ready: false });
+    useFavorites.setState({ ids: [], items: {}, notes: {}, ready: false });
     useFavorites.getState().hydrate();
     assert.deepEqual(useFavorites.getState().ids, ["abc"]);
     assert.equal(useFavorites.getState().items.abc?.price, 1_800_000);
@@ -74,9 +74,19 @@ describe("favorites persist", () => {
     useFavorites.getState().toggle(row);
     assert.equal(useFavorites.getState().has("abc"), false);
 
-    useFavorites.setState({ ids: [], items: {}, ready: false });
+    useFavorites.setState({ ids: [], items: {}, notes: {}, ready: false });
     useFavorites.getState().hydrate();
     assert.deepEqual(useFavorites.getState().ids, []);
     assert.equal(useFavorites.getState().items.abc, undefined);
+  });
+
+  it("stores a note on a saved house", () => {
+    const row = house("abc", "Aavej 3");
+    useFavorites.getState().toggle(row);
+    useFavorites.getState().setNote("abc", " visning torsdag  ");
+    assert.equal(useFavorites.getState().notes.abc, "visning torsdag");
+    useFavorites.setState({ ids: [], items: {}, notes: {}, ready: false });
+    useFavorites.getState().hydrate();
+    assert.equal(useFavorites.getState().notes.abc, "visning torsdag");
   });
 });
