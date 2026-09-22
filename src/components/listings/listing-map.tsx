@@ -134,7 +134,18 @@ export function ListingMap({
     areaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     setMapReady((n) => n + 1);
-    const invalidate = () => map.invalidateSize();
+    let lastW = 0;
+    let lastH = 0;
+    const invalidate = () => {
+      const node = host.current;
+      if (!node) return;
+      const w = Math.round(node.clientWidth);
+      const h = Math.round(node.clientHeight);
+      if (w === lastW && h === lastH) return;
+      lastW = w;
+      lastH = h;
+      map.invalidateSize({ animate: false });
+    };
     const ro = new ResizeObserver(invalidate);
     ro.observe(host.current);
     requestAnimationFrame(invalidate);
@@ -180,14 +191,13 @@ export function ListingMap({
         kommuneCenter: focus ? { lat: focus.lat, lon: focus.lon } : null,
         pins,
       });
-      map.invalidateSize();
+      map.invalidateSize({ animate: false });
       if (camera?.kind === "bounds") {
-        map.fitBounds(leafletBox(camera.bounds).pad(0.08), { padding: [28, 28], maxZoom: camera.maxZoom });
+        map.fitBounds(leafletBox(camera.bounds).pad(0.08), { padding: [28, 28], maxZoom: camera.maxZoom, animate: false });
       } else if (camera?.kind === "point") {
-        map.setView([camera.lat, camera.lon], camera.zoom);
+        map.setView([camera.lat, camera.lon], camera.zoom, { animate: false });
       }
     }
-    requestAnimationFrame(() => map.invalidateSize());
   }, [listings, listingKey, seenSet, likedSet, firstSeen, boxes, districts, named, drawMode, kommune, focus, mapReady]);
 
   useEffect(() => {
