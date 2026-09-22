@@ -4,6 +4,7 @@ import { EnergyBadge } from "@/components/listings/energy-badge";
 import { HighlightText } from "@/components/listings/highlight-text";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { PriceHistory } from "@/components/listings/price-history";
+import { askingHistoryFromChange } from "@/lib/listings/price-history";
 import { SavedNote } from "@/components/listings/saved-note";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
@@ -57,13 +58,19 @@ export function HouseDetail({
   const href = listing.caseUrl || boligsidenUrl(listing.slugAddress || listing.slug);
   const seed = useMemo(() => listingPhotos(listing), [listing]);
   const [photos, setPhotos] = useState(seed);
-  const [history, setHistory] = useState(listing.priceHistory ?? []);
+  const [history, setHistory] = useState(
+    () => listing.priceHistory?.length ? listing.priceHistory : askingHistoryFromChange(listing.price, listing.priceChange, listing.days),
+  );
   const keywordWords = useKeywords((s) => s.words);
   const keywordHits = moduleOn("keywords") ? matchedKeywords(listing, keywordWords) : [];
 
   useEffect(() => {
     setPhotos(seed);
-    setHistory(listing.priceHistory ?? []);
+    setHistory(
+      listing.priceHistory?.length
+        ? listing.priceHistory
+        : askingHistoryFromChange(listing.price, listing.priceChange, listing.days),
+    );
   }, [seed, listing.id, listing.priceHistory]);
 
   useEffect(() => {
@@ -217,7 +224,14 @@ export function HouseDetail({
 
         <SavedNote id={listing.id} saved={saved} />
 
-        {moduleOn("priceHistory") ? <PriceHistory change={listing.priceChange} points={history} /> : null}
+        {moduleOn("priceHistory") ? (
+          <PriceHistory
+            price={listing.price}
+            change={listing.priceChange}
+            days={listing.days}
+            points={history}
+          />
+        ) : null}
 
         <section className="mt-8 rounded-xl border border-border bg-surface p-4">
           <p className="text-xs uppercase tracking-wider text-muted">Mægler</p>

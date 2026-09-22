@@ -1,5 +1,5 @@
 import type { GeoBounds, Listing, ListingDetail } from "./types";
-import { parsePriceHistory } from "./price-history";
+import { askingHistoryFromChange, mergeHistory, parsePriceHistory } from "./price-history";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -103,7 +103,11 @@ export function mapDetail(raw: unknown): ListingDetail | null {
     bathrooms: num(rec.numberOfBathrooms),
     floors: num(rec.numberOfFloors),
     images: collectImages(rec),
-    priceHistory: parsePriceHistory(rec),
+    addressId: str(asRecord(rec.address)?.addressID) ?? str(rec.addressID),
+    priceHistory: mergeHistory(
+      parsePriceHistory(rec),
+      askingHistoryFromChange(base.price, base.priceChange, base.days),
+    ),
   };
 }
 

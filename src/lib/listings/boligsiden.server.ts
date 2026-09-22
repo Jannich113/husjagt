@@ -1,5 +1,6 @@
 import snapshot from "./snapshot.json";
 import { mapDetail, mapListing, inAnyBox } from "./map-listing";
+import { mergeHistory, parsePriceHistory } from "./price-history";
 import { listingInDistricts } from "./districts";
 import { kommuneBySlug } from "./kommuner";
 import { proxyFetch } from "./proxy-fetch";
@@ -240,7 +241,10 @@ export async function searchBoligsiden(filters: SearchFilters): Promise<SearchRe
 export async function getBoligsidenCase(id: string): Promise<ListingDetail | null> {
   const payload = await readJson(`${BOLIGSIDEN}/cases/${encodeURIComponent(id)}`);
   const detail = mapDetail(payload);
-  if (detail) return detail;
+  if (detail) {
+    const sales = await loadAddressSales(detail.addressId);
+    return { ...detail, priceHistory: mergeHistory(detail.priceHistory, sales) };
+  }
 
   const snap = snapshotListings().find((row) => row.id === id);
   if (!snap) return null;
@@ -253,4 +257,10 @@ export async function getBoligsidenCase(id: string): Promise<ListingDetail | nul
     images: snap.image ? [snap.image] : [],
     priceHistory: [],
   };
+}
+
+async function loadAddressSales(addressId: string | null | undefined) {
+  if (!addressId) return [];
+  const payload = await readJson(`${BOLIGSIDEN}/addresses/${encodeURIComponent(addressId)}`);
+  return parsePriceHistory(payload, "sold");
 }
