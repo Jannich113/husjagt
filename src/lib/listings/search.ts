@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { liveHuntServices } from "@/lib/hunt/container.server";
 import { runGetListing, runHuntSearch } from "@/lib/hunt/run-search";
+import { fetchKommuneView } from "./dawa.server";
 import { DEFAULT_FILTERS } from "./types";
 
 const filtersSchema = z.object({
@@ -125,4 +126,10 @@ export const suggestHuntPlaces = createServerFn({ method: "POST" })
   .validator(z.object({ q: z.string().max(80) }))
   .handler(async ({ data }) => {
     return liveHuntServices().places.suggestPlaces(data.q);
+  });
+
+export const loadKommuneView = createServerFn({ method: "POST" })
+  .validator(z.object({ municipality: z.string().min(1).max(80) }))
+  .handler(async ({ data }) => {
+    return fetchKommuneView(data.municipality);
   });

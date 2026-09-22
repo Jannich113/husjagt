@@ -9,10 +9,12 @@ import {
   placesFromPostnumre,
   type DawaPostHint,
 } from "./dawa";
+import { kommuneViewFromDawa, type KommuneView } from "./kommune-view";
 import { localPlaceHits, type HuntPlace } from "./place";
 
 const districtCache = new Map<string, District[]>();
 const hintCache = new Map<string, DawaPostHint[]>();
+const viewCache = new Map<string, KommuneView | null>();
 
 async function dawaJson(path: string): Promise<unknown | null> {
   try {
@@ -41,6 +43,20 @@ export async function fetchKommuneDistricts(slug: string): Promise<District[]> {
   districtCache.set(slug, rows);
   rememberDistricts(slug, rows);
   return rows;
+}
+
+export async function fetchKommuneView(slug: string): Promise<KommuneView | null> {
+  if (viewCache.has(slug)) return viewCache.get(slug) ?? null;
+  const kommune = kommuneBySlug(slug);
+  if (!kommune) {
+    viewCache.set(slug, null);
+    return null;
+  }
+  const code = String(kommune.code).padStart(4, "0");
+  const payload = await dawaJson(`/kommuner/${code}`);
+  const view = kommuneViewFromDawa(slug, payload);
+  viewCache.set(slug, view);
+  return view;
 }
 
 export async function suggestPostnumre(query: string, slug?: string): Promise<DawaPostHint[]> {

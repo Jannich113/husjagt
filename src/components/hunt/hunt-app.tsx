@@ -1,15 +1,16 @@
 import { LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { appendSearchPage } from "@/lib/listings/aggregate";
+import { EMPTY_SEARCH } from "@/lib/hunt/ports";
 import { visibleListings } from "@/lib/hunt/visible";
+import { appendSearchPage } from "@/lib/listings/aggregate";
 import { useFavorites } from "@/lib/listings/favorites";
 import { useFirstSeen } from "@/lib/listings/fresh";
 import { useKeywords } from "@/lib/listings/keywords";
 import { placeLabel } from "@/lib/listings/place";
 import { districtsForKommune, rememberDistricts, type District } from "@/lib/listings/districts";
 import { extraFilterLabels, typeLabel } from "@/lib/listings/format";
-import { listenSocial, loadKommuneDistricts, searchHouses } from "@/lib/listings/search";
+import { listenSocial, loadKommuneDistricts, loadKommuneView, searchHouses } from "@/lib/listings/search";
 import { loadOfflineSearch, saveOfflineSearch } from "@/lib/listings/offline-cache";
 import {
   filtersFromHunt,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/listings/social";
 import { useSocialWatch } from "@/lib/listings/social-watch";
 import type { Listing, SearchFilters, SearchResult } from "@/lib/listings/types";
+import type { KommuneView } from "@/lib/listings/kommune-view";
 import { HuntBody } from "./hunt-body";
 import { HuntHeader } from "./hunt-header";
 
@@ -64,6 +66,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [hasMore, setHasMore] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [areaDistricts, setAreaDistricts] = useState<District[]>(() => districtsForKommune("odense"));
+  const [placeView, setPlaceView] = useState<KommuneView | null>(null);
   const [reelFocus, setReelFocus] = useState<string | null>(null);
   const savedIds = useFavorites((s) => s.ids);
   const savedMap = useFavorites((s) => s.items);
@@ -103,6 +106,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   useEffect(() => {
     let alive = true;
     setAreaDistricts(districtsForKommune(filters.municipality));
+    setPlaceView(null);
     void loadKommuneDistricts({ data: { municipality: filters.municipality } })
       .then((rows) => {
         if (!alive || !rows.length) return;
@@ -111,6 +115,13 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       })
       .catch(() => {
         /* baked Odense polygons stay as fallback */
+      });
+    void loadKommuneView({ data: { municipality: filters.municipality } })
+      .then((view) => {
+        if (alive) setPlaceView(view);
+      })
+      .catch(() => {
+        if (alive) setPlaceView(null);
       });
     return () => {
       alive = false;
@@ -121,6 +132,9 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     let alive = true;
     setBusy(true);
     setPage(1);
+    setOpenListing(null);
+    const cached = loadOfflineSearch(filters.municipality);
+    setResult(cached?.result ?? { ...EMPTY_SEARCH, source: "Henter live boliger…" });
     void searchHouses({ data: { ...filters, page: 1 } })
       .then((houses) => {
         if (!alive) return;
@@ -130,8 +144,8 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       })
       .catch(() => {
         if (!alive) return;
-        const cached = loadOfflineSearch();
-        if (cached) setResult(cached.result);
+        const fallback = loadOfflineSearch(filters.municipality);
+        if (fallback) setResult(fallback.result);
         setHasMore(false);
       })
       .finally(() => {
@@ -303,6 +317,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
           filters={filters}
           catalog={areaDistricts}
           kommuneName={placeLabel(filters)}
+          placeView={placeView}
           listenView={listenView}
           listenMatched={listenMatched.length}
           listenFound={listenFound}

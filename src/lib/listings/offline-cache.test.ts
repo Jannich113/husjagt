@@ -25,9 +25,9 @@ describe("offline search cache", () => {
     try {
       assert.equal(loadOfflineSearch(), null);
       saveOfflineSearch(filters, result);
-      const loaded = loadOfflineSearch();
+      const loaded = loadOfflineSearch("odense");
       assert.equal(loaded?.result.listings[0]?.id, "1");
-      assert.equal(store.has(OFFLINE_SEARCH_KEY), true);
+      assert.equal(loadOfflineSearch("assens"), null);
 
       store.set(OFFLINE_SEARCH_KEY, "{not json");
       assert.equal(loadOfflineSearch(), null);

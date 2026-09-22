@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { District } from "@/lib/listings/districts";
+import type { KommuneView } from "@/lib/listings/kommune-view";
 import type { GeoBounds, Listing } from "@/lib/listings/types";
 
 export function ClientMap({
@@ -9,6 +10,7 @@ export function ClientMap({
   boxes = [],
   districts = [],
   kommune = "odense",
+  focus = null,
   catalog,
   onAreaChange,
 }: {
@@ -18,6 +20,7 @@ export function ClientMap({
   boxes?: GeoBounds[];
   districts?: string[];
   kommune?: string;
+  focus?: KommuneView | null;
   catalog?: District[];
   onAreaChange?: (next: { boxes: GeoBounds[]; districts: string[] }) => void;
 }) {
@@ -42,6 +45,7 @@ export function ClientMap({
       boxes={boxes}
       districts={districts}
       kommune={kommune}
+      focus={focus}
       catalog={catalog}
       onAreaChange={onAreaChange}
     />

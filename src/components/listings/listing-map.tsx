@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GeoBounds, Listing } from "@/lib/listings/types";
+import type { KommuneView } from "@/lib/listings/kommune-view";
 import { formatKr } from "@/lib/listings/format";
 import { useFavorites } from "@/lib/listings/favorites";
 import { listingFreshness, useFirstSeen, type Freshness } from "@/lib/listings/fresh";
@@ -20,6 +21,7 @@ type Props = {
   boxes?: GeoBounds[];
   districts?: string[];
   kommune?: string;
+  focus?: KommuneView | null;
   catalog?: District[];
   onAreaChange?: (next: { boxes: GeoBounds[]; districts: string[] }) => void;
 };
@@ -80,6 +82,7 @@ export function ListingMap({
   boxes = [],
   districts = [],
   kommune = "odense",
+  focus = null,
   catalog,
   onAreaChange,
 }: Props) {
@@ -156,7 +159,7 @@ export function ListingMap({
       marker.addTo(group);
       pinBounds.push([listing.lat, listing.lon]);
     }
-    const areaKey = `${listingKey}|${boxes.map((b) => `${b.minLon}`).join()}|${districts.join(",")}`;
+    const areaKey = `${kommune}|${listingKey}|${boxes.map((b) => `${b.minLon}`).join()}|${districts.join(",")}|${focus?.lat ?? ""}`;
     if (fittedKey.current !== areaKey && !drawMode) {
       fittedKey.current = areaKey;
       const fit: L.LatLngBounds[] = [];
@@ -171,9 +174,11 @@ export function ListingMap({
         map.fitBounds(union.pad(0.12), { padding: [28, 28], maxZoom: 14 });
       } else if (pinBounds.length > 1) map.fitBounds(pinBounds, { padding: [28, 28], maxZoom: 14 });
       else if (pinBounds.length === 1) map.setView(pinBounds[0], 14);
+      else if (focus?.bounds) map.fitBounds(leafletBox(focus.bounds).pad(0.04), { padding: [28, 28], maxZoom: 12 });
+      else if (focus) map.setView([focus.lat, focus.lon], 11);
     }
     requestAnimationFrame(() => map.invalidateSize());
-  }, [listings, listingKey, seenSet, likedSet, firstSeen, boxes, districts, named, drawMode]);
+  }, [listings, listingKey, seenSet, likedSet, firstSeen, boxes, districts, named, drawMode, kommune, focus]);
 
   useEffect(() => {
     const map = mapRef.current;

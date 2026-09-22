@@ -2,6 +2,7 @@ import { HouseCard } from "@/components/listings/house-card";
 import { HouseDetail } from "@/components/listings/house-detail";
 import { VideoRail } from "@/components/listings/reel-feed";
 import type { District } from "@/lib/listings/districts";
+import type { KommuneView } from "@/lib/listings/kommune-view";
 import { HUNT_WIDE_PX, useMinWidth } from "@/lib/listings/layout";
 import type { HuntView } from "@/lib/listings/share";
 import type { SocialListenResult, SocialListing } from "@/lib/listings/social";
@@ -20,6 +21,7 @@ export function HuntBody({
   filters,
   catalog,
   kommuneName,
+  placeView,
   listenView,
   listenMatched,
   listenFound,
@@ -45,6 +47,7 @@ export function HuntBody({
   filters: SearchFilters;
   catalog: District[];
   kommuneName: string;
+  placeView: KommuneView | null;
   listenView: SocialListenResult;
   listenMatched: number;
   listenFound: number;
@@ -91,6 +94,7 @@ export function HuntBody({
             boxes={filters.boxes}
             districts={filters.districts}
             kommune={filters.municipality}
+            focus={placeView}
             catalog={catalog}
             onAreaChange={onAreaChange}
           />
