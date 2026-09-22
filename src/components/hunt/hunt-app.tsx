@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EMPTY_SEARCH } from "@/lib/hunt/ports";
 import { moduleOn } from "@/lib/hunt/modules";
@@ -43,6 +43,7 @@ import { HuntHeader } from "./hunt-header";
 import { HuntSync } from "@/components/account/hunt-sync";
 
 const VIEW_KEY = "husjagt:view";
+const FIRST_PAINT = 12;
 
 function storedView(fallback: HuntView): HuntView {
   if (typeof window === "undefined") return fallback;
@@ -78,6 +79,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [placeView, setPlaceView] = useState<KommuneView | null>(null);
   const [reelFocus, setReelFocus] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [listLimit, setListLimit] = useState(FIRST_PAINT);
   const savedIds = useFavorites((s) => s.ids);
   const savedMap = useFavorites((s) => s.items);
   const hydrate = useFavorites((s) => s.hydrate);
@@ -116,6 +118,21 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   }, [hydrate, hydrateSeen, hydrateHidden, hydrateFirstSeen, hydrateWatch, hydrateKeywords, hydrateAlerts]);
 
   useEffect(() => {
+    let cancel = false;
+    const reveal = () => {
+      if (cancel) return;
+      startTransition(() => setListLimit(Number.POSITIVE_INFINITY));
+    };
+    const idle = window.requestIdleCallback?.(reveal, { timeout: 700 });
+    const backup = window.setTimeout(reveal, 700);
+    return () => {
+      cancel = true;
+      if (idle != null) window.cancelIdleCallback(idle);
+      window.clearTimeout(backup);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!moduleOn("searchAlerts")) return;
     let alive = true;
     async function tick() {
@@ -132,7 +149,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         /* next interval */
       }
     }
-    void tick();
+    const kick = window.setTimeout(() => void tick(), 5000);
     const timer = window.setInterval(() => void tick(), ALERTS_INTERVAL_MS);
     const onVis = () => {
       if (document.visibilityState === "visible") void tick();
@@ -140,9 +157,17 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     document.addEventListener("visibilitychange", onVis);
     return () => {
       alive = false;
+      window.clearTimeout(kick);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
+  }, []);
+
+  useEffect(() => {
+    const queued = (window as Window & { __huntQueue?: string[] }).__huntQueue ?? [];
+    (window as Window & { __huntReady?: boolean }).__huntReady = true;
+    const last = queued[queued.length - 1];
+    if (last === "list" || last === "map" || last === "listen" || last === "saved") goView(last);
   }, []);
 
   useEffect(() => {
@@ -153,24 +178,27 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     let alive = true;
     setAreaDistricts(districtsForKommune(filters.municipality));
     setPlaceView(null);
-    void loadKommuneDistricts({ data: { municipality: filters.municipality } })
-      .then((rows) => {
-        if (!alive || !rows.length) return;
-        rememberDistricts(filters.municipality, rows);
-        setAreaDistricts(rows);
-      })
-      .catch(() => {
-        /* baked Odense polygons stay as fallback */
-      });
-    void loadKommuneView({ data: { municipality: filters.municipality } })
-      .then((view) => {
-        if (alive) setPlaceView(view);
-      })
-      .catch(() => {
-        if (alive) setPlaceView(null);
-      });
+    const timer = window.setTimeout(() => {
+      void loadKommuneDistricts({ data: { municipality: filters.municipality } })
+        .then((rows) => {
+          if (!alive || !rows.length) return;
+          rememberDistricts(filters.municipality, rows);
+          setAreaDistricts(rows);
+        })
+        .catch(() => {
+          /* baked Odense polygons stay as fallback */
+        });
+      void loadKommuneView({ data: { municipality: filters.municipality } })
+        .then((view) => {
+          if (alive) setPlaceView(view);
+        })
+        .catch(() => {
+          if (alive) setPlaceView(null);
+        });
+    }, 1200);
     return () => {
       alive = false;
+      window.clearTimeout(timer);
     };
   }, [filters.municipality]);
 
@@ -178,7 +206,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
 
   useEffect(() => {
     let alive = true;
-    const delay = firstSearch.current && initial.listings.length >= 4 ? 1600 : 0;
+    const delay = firstSearch.current && initial.listings.length >= 4 ? 2000 : 0;
     firstSearch.current = false;
     if (delay === 0) {
       setPage(1);
@@ -193,9 +221,11 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       void searchHouses({ data: { ...filters, page: 1 } })
         .then((houses) => {
           if (!alive) return;
-          setResult(houses);
+          startTransition(() => {
+            setResult(houses);
+            setHasMore(houses.listings.length >= filters.perPage || houses.totalHits > houses.listings.length);
+          });
           saveOfflineSearch(filters, houses);
-          setHasMore(houses.listings.length >= filters.perPage || houses.totalHits > houses.listings.length);
         })
         .catch(() => {
           if (!alive) return;
@@ -342,6 +372,8 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     }
   }
 
+  const painted = view === "list" && listings.length > listLimit ? listings.slice(0, listLimit) : listings;
+
   return (
     <div className="hunt-shell">
       <HuntSync />
@@ -382,7 +414,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       <div className="hunt-body">
         <HuntBody
           view={view}
-          listings={listings}
+          listings={painted}
           openListing={openListing}
           filters={filters}
           catalog={areaDistricts}

@@ -17,8 +17,8 @@
   --color-heart: #c4453a;
   --color-heart-ring: #ffffff;
   --color-pin-seen: #9aa79e;
-  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
-  --font-sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --font-sans: "Segoe UI", system-ui, sans-serif;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;

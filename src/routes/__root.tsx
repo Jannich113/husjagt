@@ -27,12 +27,6 @@ export const Route = createRootRoute({
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;1,400&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap",
-      },
     ],
   }),
   component: () => (
@@ -41,6 +35,12 @@ export const Route = createRootRoute({
         <HeadContent />
       </head>
       <body className="min-h-dvh bg-bg text-fg">
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var q=[];window.__huntQueue=q;document.addEventListener('click',function(e){if(window.__huntReady)return;var n=e.target&&e.target.closest&&e.target.closest('[data-view]');if(!n)return;e.preventDefault();q.push(n.getAttribute('data-view'));},true);})();",
+          }}
+        />
         <PreviewHostBridge />
         <AuthProvider>
           <WebViewShell>

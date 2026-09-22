@@ -143,13 +143,13 @@ export function HuntHeader({
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap rounded-full border border-border bg-surface p-1">
-          <ViewTab active={view === "list"} href={huntPath(filters, "list", { q: streetQuery })} onClick={() => onView("list")} icon={<LayoutGrid className="size-4" />} label="Liste" />
-          <ViewTab active={view === "map"} href={huntPath(filters, "map", { q: streetQuery })} onClick={() => onView("map")} icon={<MapIcon className="size-4" />} label="Kort" />
+          <ViewTab active={view === "list"} view="list" href={huntPath(filters, "list", { q: streetQuery })} onClick={() => onView("list")} icon={<LayoutGrid className="size-4" />} label="Liste" />
+          <ViewTab active={view === "map"} view="map" href={huntPath(filters, "map", { q: streetQuery })} onClick={() => onView("map")} icon={<MapIcon className="size-4" />} label="Kort" />
           {moduleOn("listen") ? (
-            <ViewTab active={view === "listen"} href={huntPath(filters, "listen", { q: streetQuery })} onClick={() => onView("listen")} icon={<Radio className="size-4" />} label="Lyt" />
+            <ViewTab active={view === "listen"} view="listen" href={huntPath(filters, "listen", { q: streetQuery })} onClick={() => onView("listen")} icon={<Radio className="size-4" />} label="Lyt" />
           ) : null}
           {moduleOn("saved") ? (
-            <ViewTab active={view === "saved"} href={huntPath(filters, "saved", { q: streetQuery })} onClick={() => onView("saved")} icon={<Heart className="size-4" />} label="Gemte" />
+            <ViewTab active={view === "saved"} view="saved" href={huntPath(filters, "saved", { q: streetQuery })} onClick={() => onView("saved")} icon={<Heart className="size-4" />} label="Gemte" />
           ) : null}
         </div>
         <p className="text-sm tabular-nums text-muted">{countLabel}</p>
