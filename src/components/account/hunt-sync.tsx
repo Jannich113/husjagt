@@ -1,7 +1,14 @@
 import { useEffect, useRef } from "react";
-import { useCurrentUser } from "@/lib/auth/use-current-user";
 import { applyHuntBlob, blobIsNewer, collectHuntBlob } from "@/lib/account/blob";
 import { loadHuntBlob, saveHuntBlob } from "@/lib/account/blob.server";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { useFavorites } from "@/lib/listings/favorites";
+import { useFirstSeen } from "@/lib/listings/fresh";
+import { useHidden } from "@/lib/listings/hidden";
+import { useKeywords } from "@/lib/listings/keywords";
+import { useSearchAlerts } from "@/lib/listings/search-alerts";
+import { useSeen } from "@/lib/listings/seen";
+import { useSocialWatch } from "@/lib/listings/social-watch";
 
 const LOCAL_STAMP = "husjagt-blob-saved-at";
 
@@ -15,13 +22,31 @@ function setLocalStamp(value: number) {
   localStorage.setItem(LOCAL_STAMP, String(value));
 }
 
+function rehydrateLocalStores() {
+  useFavorites.setState({ ready: false });
+  useHidden.setState({ ready: false });
+  useSeen.setState({ ready: false });
+  useFirstSeen.setState({ ready: false });
+  useSearchAlerts.setState({ ready: false });
+  useKeywords.setState({ ready: false });
+  useSocialWatch.setState({ ready: false });
+  useFavorites.getState().hydrate();
+  useHidden.getState().hydrate();
+  useSeen.getState().hydrate();
+  useFirstSeen.getState().hydrate();
+  useSearchAlerts.getState().hydrate();
+  useKeywords.getState().hydrate();
+  useSocialWatch.getState().hydrate();
+}
+
 export function HuntSync() {
-  const user = useCurrentUser();
-  const armed = useRef(false);
+  const { user, isPending } = useCurrentUserState();
+  const userId = user?.id;
+  const armed = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user || armed.current) return;
-    armed.current = true;
+    if (isPending || !userId || armed.current === userId) return;
+    armed.current = userId;
     let alive = true;
     void loadHuntBlob()
       .then((remote) => {
@@ -30,7 +55,7 @@ export function HuntSync() {
         if (blobIsNewer(remote, local) && remote) {
           applyHuntBlob(remote);
           setLocalStamp(remote.savedAt);
-          window.location.reload();
+          rehydrateLocalStores();
           return;
         }
         const payload = collectHuntBlob();
@@ -58,7 +83,7 @@ export function HuntSync() {
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", onHide);
     };
-  }, [user]);
+  }, [isPending, userId]);
 
   return null;
 }

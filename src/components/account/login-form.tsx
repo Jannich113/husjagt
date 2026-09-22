@@ -1,16 +1,20 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Navigate } from "@tanstack/react-router";
+import { Navigate, useNavigate } from "@tanstack/react-router";
 import { KONTO_COPY, type KontoNeed } from "@/lib/account/gate";
 import { DEV_TEST_LOGIN } from "@/lib/account/dev-test-user";
+import { persistSessionBearer, sessionTokenFromAuthData } from "@/lib/account/session-bearer";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function LoginForm({ need }: { need?: KontoNeed }) {
   const { user, isPending } = useCurrentUserState();
-  const copy = need ? KONTO_COPY[need] : {
-    title: "Opret konto",
-    text: "Kun hvis du vil overvåge, gemme noter eller styre forbindelser. Ellers kan du jage uden konto — så gemmes de ting ikke.",
-  };
+  const navigate = useNavigate();
+  const copy = need
+    ? KONTO_COPY[need]
+    : {
+        title: "Opret konto",
+        text: "Kun hvis du vil overvåge, gemme noter eller styre forbindelser. Ellers kan du jage uden konto — så gemmes de ting ikke.",
+      };
   const [mode, setMode] = useState<"signup" | "signin">("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,7 +25,7 @@ export function LoginForm({ need }: { need?: KontoNeed }) {
   if (isPending) {
     return <div className="h-40 animate-pulse rounded-2xl bg-sunken" />;
   }
-  if (user) return <Navigate to="/" />;
+  if (user && !busy) return <Navigate to="/" />;
   if (!authEnabled) return <p className="text-sm text-muted">Konto er slået fra.</p>;
 
   async function submit(event: FormEvent) {
@@ -31,21 +35,28 @@ export function LoginForm({ need }: { need?: KontoNeed }) {
     const mail = email.trim();
     const pass = password.trim();
     try {
-      if (mode === "signup") {
-        const result = await authClient.signUp.email({
-          email: mail,
-          password: pass,
-          name: name.trim() || mail.split("@")[0] || "Jæger",
-        });
-        if (result.error) throw new Error(result.error.message || "Kunne ikke oprette konto");
-      } else {
-        const result = await authClient.signIn.email({ email: mail, password: pass });
-        if (result.error) throw new Error(result.error.message || "Forkert e-mail eller adgangskode");
+      const result =
+        mode === "signup"
+          ? await authClient.signUp.email({
+              email: mail,
+              password: pass,
+              name: name.trim() || mail.split("@")[0] || "Jæger",
+            })
+          : await authClient.signIn.email({ email: mail, password: pass });
+      if (result.error) {
+        throw new Error(
+          result.error.message || (mode === "signup" ? "Kunne ikke oprette konto" : "Forkert e-mail eller adgangskode"),
+        );
       }
-      window.location.assign("/");
+      persistSessionBearer(sessionTokenFromAuthData(result.data));
+      try {
+        await authClient.getSession();
+      } catch {
+        /* cookie path still works when deployed */
+      }
+      await navigate({ to: "/" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Noget gik galt");
-    } finally {
       setBusy(false);
     }
   }
