@@ -11,7 +11,7 @@ import type { GeoBounds, Listing, SearchFilters } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 import { ClientMap } from "./client-map";
 import { EmptyState } from "./empty-state";
-import { HuntLoading } from "./hunt-loading";
+import { HuntLoading, ListingRowSkeleton, ListenSkeleton } from "./hunt-loading";
 import { ListenView } from "./listen-view";
 import { LoadMore } from "./load-more";
 import { forwardWheelToList } from "./wheel";
@@ -88,6 +88,7 @@ export function HuntBody({
   const rows = view === "list" || view === "saved" ? listings.slice(0, painted) : listings;
 
   if (view === "listen") {
+    if (busy && !listenView.listings.length) return <ListenSkeleton />;
     return (
       <ListenView
         kommuneName={kommuneName}
@@ -175,6 +176,12 @@ export function HuntBody({
               layout="row"
             />
           ))}
+          {view === "list" && painted < listings.length
+            ? Array.from({ length: Math.min(4, listings.length - painted) }, (_, i) => (
+                <ListingRowSkeleton key={`skel-${i}`} />
+              ))
+            : null}
+          {moreBusy ? <ListingRowSkeleton /> : null}
         </div>
         {view !== "saved" ? (
           <LoadMore

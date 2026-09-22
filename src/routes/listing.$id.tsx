@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { HouseDetail } from "@/components/listings/house-detail";
+import { DetailSkeleton } from "@/components/hunt/hunt-loading";
 import { useFirstSeen } from "@/lib/listings/fresh";
 import { useHidden } from "@/lib/listings/hidden";
 import { getListing } from "@/lib/listings/search";
@@ -9,6 +10,7 @@ import { listingShareCopy, recalledHunt } from "@/lib/listings/share";
 
 export const Route = createFileRoute("/listing/$id")({
   loader: ({ params }) => getListing({ data: { id: params.id } }),
+  pendingComponent: DetailSkeleton,
   head: ({ loaderData }) => {
     if (!loaderData) {
       return { meta: [{ title: "Boligen blev ikke fundet · Husjagt" }] };

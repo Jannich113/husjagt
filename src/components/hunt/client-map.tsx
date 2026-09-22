@@ -35,7 +35,7 @@ export function ClientMap({
     };
   }, []);
   if (!MapCmp) {
-    return <div className={fill ? "size-full bg-sunken" : "h-full min-h-[420px] rounded-xl border border-border bg-sunken"} />;
+    return <div className={fill ? "hunt-skel-map size-full" : "hunt-skel-map h-full min-h-[420px] rounded-xl border border-border"} aria-hidden />;
   }
   return (
     <MapCmp

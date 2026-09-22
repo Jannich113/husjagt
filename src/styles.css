@@ -594,23 +594,108 @@
   pointer-events: none;
 }
 
-.hunt-skel-card {
-  height: 6.5rem;
-  border-radius: 1rem;
-  border: 1px solid var(--color-border);
+.hunt-skel,
+.hunt-skel-photo,
+.hunt-skel-line,
+.hunt-skel-dot,
+.hunt-skel-block,
+.hunt-skel-map {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-sunken);
+}
+
+.hunt-skel::after,
+.hunt-skel-photo::after,
+.hunt-skel-line::after,
+.hunt-skel-dot::after,
+.hunt-skel-block::after,
+.hunt-skel-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     90deg,
-    var(--color-sunken) 0%,
-    color-mix(in oklab, var(--color-surface) 70%, white) 45%,
-    var(--color-sunken) 100%
+    transparent 0%,
+    color-mix(in oklab, var(--color-surface) 80%, white) 50%,
+    transparent 100%
   );
-  background-size: 200% 100%;
-  animation: huntSkel 1.2s ease-in-out infinite;
+  transform: translateX(-100%);
+  animation: huntSkel 1.15s ease-in-out infinite;
+}
+
+.hunt-skel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+}
+
+.hunt-skel-photo {
+  height: 5rem;
+  width: 6rem;
+  flex: none;
+  border-radius: 0.375rem;
+}
+
+.hunt-skel-line {
+  height: 0.7rem;
+  border-radius: 999px;
+}
+
+.hunt-skel-line.is-lg {
+  height: 1.05rem;
+  width: 7rem;
+}
+
+.hunt-skel-line.is-faint {
+  width: 8rem;
+  opacity: 0.7;
+}
+
+.hunt-skel-dot {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: 999px;
+}
+
+.hunt-skel-block {
+  border-radius: 0.75rem;
+}
+
+.hunt-skel-map {
+  height: 100%;
+  min-height: 22rem;
+  background:
+    radial-gradient(circle at 30% 40%, color-mix(in oklab, var(--color-primary) 18%, var(--color-sunken)) 0 7px, transparent 8px),
+    radial-gradient(circle at 62% 55%, color-mix(in oklab, var(--color-primary) 18%, var(--color-sunken)) 0 7px, transparent 8px),
+    radial-gradient(circle at 48% 28%, color-mix(in oklab, var(--color-primary) 18%, var(--color-sunken)) 0 7px, transparent 8px),
+    var(--color-sunken);
+}
+
+.hunt-skel-hero {
+  height: 16rem;
+  border-radius: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hunt-skel::after,
+  .hunt-skel-photo::after,
+  .hunt-skel-line::after,
+  .hunt-skel-dot::after,
+  .hunt-skel-block::after,
+  .hunt-skel-map::after {
+    animation: none;
+  }
 }
 
 @keyframes huntSkel {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .reel-ken {
