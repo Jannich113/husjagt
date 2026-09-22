@@ -30,6 +30,8 @@ No Husjagt account. No server copy. Clearing site data wipes the hunt. Two phone
 
 Operator secrets for the *app itself* (VAPID private key, `DATABASE_URL`, GitHub deploy PAT) are **class D**: host env / GitHub Actions secrets. They are not user data and must not go into this vault UI.
 
+Session-token audit: [session-tokens.md](session-tokens.md).
+
 [#45](https://github.com/Jannich113/husjagt/issues/45) / [#46](https://github.com/Jannich113/husjagt/issues/46) already forbid federating production login to `auth.grok.me`. Keep `VITE_AUTH_ENABLED=false` until we have our own origin.
 
 ## Recommended shape

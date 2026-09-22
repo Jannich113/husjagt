@@ -61,7 +61,8 @@ function readConnections(): OAuthConnection[] {
 
 function writeConnections(connections: OAuthConnection[]) {
   if (!canStore()) return;
-  globalThis.localStorage.setItem(OAUTH_KEY, JSON.stringify({ connections }));
+  const safe = connections.map((row) => ({ ...row, clientSecret: null }));
+  globalThis.localStorage.setItem(OAUTH_KEY, JSON.stringify({ connections: safe }));
 }
 
 export const useOAuth = create<OAuthState>((set, get) => ({

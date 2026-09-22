@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { authorizeUrl, pkceChallenge } from "./pkce.ts";
 import { tokenUrlAllowed } from "./ssrf.ts";
+import { OAUTH_KEY, useOAuth } from "./store.ts";
 import { parseTokenResponse, redactToken, tokenExpired } from "./tokens.ts";
 
 describe("oauth pkce", () => {
@@ -50,3 +51,35 @@ describe("oauth tokens", () => {
     assert.equal(tokenExpired(null), false);
   });
 });
+
+describe("oauth store", () => {
+  it("never writes client secrets to localStorage", () => {
+    const store = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          store.set(key, value);
+        },
+        removeItem: (key: string) => {
+          store.delete(key);
+        },
+      },
+    });
+    useOAuth.setState({ ready: true, connections: [] });
+    useOAuth.getState().upsert({
+      providerId: "github",
+      clientId: "abc",
+      clientSecret: "super-secret",
+      accessToken: "tok",
+      refreshToken: null,
+      expiresAt: null,
+      accountLabel: "me",
+      connectedAt: 1,
+    });
+    const saved = JSON.parse(store.get(OAUTH_KEY) ?? "{}") as { connections: Array<{ clientSecret: string | null }> };
+    assert.equal(saved.connections[0]?.clientSecret, null);
+  });
+});
+
