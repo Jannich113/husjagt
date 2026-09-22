@@ -472,8 +472,9 @@
 
 .hunt-map-pane {
   position: relative;
-  min-width: 0;
+  min-width: 12rem;
   min-height: 22rem;
+  height: 100%;
   overflow: hidden;
   background: var(--color-sunken);
 }
@@ -503,7 +504,11 @@
   }
 
   .hunt-split:has(.hunt-map-pane) {
-    grid-template-columns: 1fr minmax(18rem, 24rem);
+    grid-template-columns: minmax(12rem, 1fr);
+  }
+
+  .hunt-split.hunt-split-map.is-open {
+    grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 24rem);
   }
 
   .hunt-list-pane {

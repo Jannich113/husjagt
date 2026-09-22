@@ -29,6 +29,7 @@ export function HuntBody({
   totalHits,
   hasMore,
   moreBusy,
+  live,
   onOpenHouse,
   onOpenHouseId,
   onCloseHouse,
@@ -36,6 +37,7 @@ export function HuntBody({
   onView,
   onToggleListenAll,
   onLoadMore,
+  onAdjustFilters,
 }: {
   view: HuntView;
   listings: Listing[];
@@ -52,6 +54,7 @@ export function HuntBody({
   totalHits: number;
   hasMore: boolean;
   moreBusy: boolean;
+  live: boolean;
   onOpenHouse: (listing: Listing) => void;
   onOpenHouseId: (id: string) => void;
   onCloseHouse: () => void;
@@ -59,6 +62,7 @@ export function HuntBody({
   onView: (next: HuntView, focus?: string | null) => void;
   onToggleListenAll: () => void;
   onLoadMore: () => void;
+  onAdjustFilters: () => void;
 }) {
   const wide = useMinWidth(HUNT_WIDE_PX);
 
@@ -78,7 +82,7 @@ export function HuntBody({
 
   if (view === "map") {
     return (
-      <div className={cn("hunt-split", openListing && "is-open")} onWheel={forwardWheelToList}>
+      <div className={cn("hunt-split hunt-split-map", openListing && "is-open")} onWheel={forwardWheelToList}>
         <div className="hunt-map-pane">
           <ClientMap
             listings={listings}
@@ -91,27 +95,24 @@ export function HuntBody({
             onAreaChange={onAreaChange}
           />
         </div>
-        <aside className="hunt-support-pane">
-          {openListing ? (
+        {openListing ? (
+          <aside className="hunt-support-pane">
             <HouseDetail listing={openListing} onBack={onCloseHouse} embedded={wide} />
-          ) : listings.length === 0 ? (
-            <div className="hunt-empty-pane">
-              <p className="font-display text-xl text-fg">Ingen boliger i udsnittet</p>
-              <p className="mt-2 text-sm">Tegn et andet område, eller ryd bydele og kortudsnit.</p>
-            </div>
-          ) : (
-            <div className="hunt-empty-pane">
-              <p className="font-display text-xl text-fg">Vælg et hus på kortet</p>
-              <p className="mt-2 text-sm">Detaljerne åbner her ved siden af.</p>
-            </div>
-          )}
-        </aside>
+          </aside>
+        ) : null}
       </div>
     );
   }
 
   if (listings.length === 0) {
-    return <EmptyState saved={view === "saved"} listen={false} />;
+    return (
+      <EmptyState
+        saved={view === "saved"}
+        listen={false}
+        onAdjustFilters={onAdjustFilters}
+        liveFailed={view !== "saved" && !live}
+      />
+    );
   }
 
   return (

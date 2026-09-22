@@ -6,7 +6,7 @@ export function proxyFetch(target: string, html = false): Promise<string | null>
   const path = `/fetch?url=${encodeURIComponent(target)}${html ? "&html=1" : ""}`;
   return new Promise((resolve) => {
     const req = http.request(
-      { socketPath: SOCKET, path, method: "GET", timeout: 20_000 },
+      { socketPath: SOCKET, path, method: "GET", timeout: 25_000 },
       (res) => {
         const chunks: Buffer[] = [];
         res.on("data", (chunk) => chunks.push(chunk as Buffer));

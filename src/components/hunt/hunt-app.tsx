@@ -62,6 +62,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [moreBusy, setMoreBusy] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [areaDistricts, setAreaDistricts] = useState<District[]>(() => districtsForKommune("odense"));
   const [reelFocus, setReelFocus] = useState<string | null>(null);
   const savedIds = useFavorites((s) => s.ids);
@@ -283,6 +284,8 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         onView={goView}
         onToggleListenAll={() => setListenAll((value) => !value)}
         onStreetQuery={applyStreet}
+        filtersOpen={filtersOpen}
+        onFiltersOpenChange={setFiltersOpen}
       />
 
       {busy || (view === "listen" && !socialReady && !playableVideos.length) ? (
@@ -309,6 +312,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
           totalHits={result.totalHits}
           hasMore={view !== "saved" && view !== "listen" && hasMore}
           moreBusy={moreBusy}
+          live={result.live}
           onOpenHouse={openHouse}
           onOpenHouseId={openHouseId}
           onCloseHouse={() => setOpenListing(null)}
@@ -316,6 +320,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
           onView={goView}
           onToggleListenAll={() => setListenAll((value) => !value)}
           onLoadMore={loadMore}
+          onAdjustFilters={() => setFiltersOpen(true)}
         />
       </div>
     </div>

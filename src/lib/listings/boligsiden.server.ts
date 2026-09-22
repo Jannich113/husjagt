@@ -1,6 +1,7 @@
 import snapshot from "./snapshot.json";
 import { mapDetail, mapListing, inAnyBox } from "./map-listing";
 import { listingInDistricts } from "./districts";
+import { kommuneBySlug } from "./kommuner";
 import { proxyFetch } from "./proxy-fetch";
 import {
   energyBand,
@@ -62,7 +63,10 @@ function zipDigits(value: string | number | null | undefined): string | null {
 function buildSearchUrl(filters: SearchFilters): string {
   const url = new URL(`${BOLIGSIDEN}/search/list/cases`);
   if (filters.types.length) url.searchParams.set("addressTypes", filters.types.join(","));
-  if (filters.municipality) url.searchParams.set("municipalities", filters.municipality);
+  if (filters.municipality) {
+    const kommune = kommuneBySlug(filters.municipality);
+    url.searchParams.set("municipalities", (kommune?.name ?? filters.municipality).toLowerCase());
+  }
   if (filters.priceMin != null) url.searchParams.set("priceMin", String(filters.priceMin));
   if (filters.priceMax != null) url.searchParams.set("priceMax", String(filters.priceMax));
   if (filters.roomsMin != null) url.searchParams.set("numberOfRoomsMin", String(filters.roomsMin));

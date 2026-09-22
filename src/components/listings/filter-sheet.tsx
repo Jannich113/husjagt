@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,18 +36,30 @@ type Props = {
   onChange: (next: SearchFilters) => void;
   count: number;
   catalog?: District[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function FilterSheet({ value, onChange, count, catalog }: Props) {
-  const [open, setOpen] = useState(false);
+export function FilterSheet({ value, onChange, count, catalog, open, onOpenChange }: Props) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const sheetOpen = open ?? innerOpen;
   const [draft, setDraft] = useState(value);
   const extra = advancedFilterCount(value);
   const [advanced, setAdvanced] = useState(extra > 0);
 
-  function openSheet() {
+  function setSheetOpen(next: boolean) {
+    onOpenChange?.(next);
+    if (open === undefined) setInnerOpen(next);
+  }
+
+  useEffect(() => {
+    if (!sheetOpen) return;
     setDraft(value);
     setAdvanced(advancedFilterCount(value) > 0);
-    setOpen(true);
+  }, [sheetOpen, value]);
+
+  function openSheet() {
+    setSheetOpen(true);
   }
 
   function apply() {
@@ -59,7 +71,7 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
       city: city || null,
       page: 1,
     });
-    setOpen(false);
+    setSheetOpen(false);
   }
 
   function toggleType(id: string) {
@@ -83,7 +95,7 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
   const draftExtra = advancedFilterCount(draft);
 
   return (
-    <Drawer.Root open={open} onOpenChange={setOpen}>
+    <Drawer.Root open={sheetOpen} onOpenChange={setSheetOpen}>
       <Button variant="outline" size="sm" onClick={openSheet} className="gap-2">
         <SlidersHorizontal className="size-4" />
         Filtre
@@ -100,7 +112,7 @@ export function FilterSheet({ value, onChange, count, catalog }: Props) {
             <button
               type="button"
               className="flex size-11 items-center justify-center rounded-full hover:bg-sunken"
-              onClick={() => setOpen(false)}
+              onClick={() => setSheetOpen(false)}
               aria-label="Luk"
             >
               <X className="size-5" />

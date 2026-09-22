@@ -74,4 +74,10 @@ describe("nationwide place picking", () => {
     assert.equal(moduleOn("placePicker"), true);
     assert.equal(moduleOn("listen"), true);
   });
+
+  it("sends Boligsiden the Danish kommune name as slug", () => {
+    assert.equal((kommuneByName("Assens")?.name ?? "").toLowerCase(), "assens");
+    assert.equal((kommuneByName("København")?.name ?? "").toLowerCase(), "københavn");
+    assert.equal((kommuneByName("Allerød")?.name ?? "").toLowerCase(), "allerød");
+  });
 });

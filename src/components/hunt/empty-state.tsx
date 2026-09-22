@@ -7,14 +7,18 @@ export function EmptyState({
   flush = false,
   filteredOut = false,
   onShowAll,
+  onAdjustFilters,
   found = 0,
+  liveFailed = false,
 }: {
   saved: boolean;
   listen: boolean;
   flush?: boolean;
   filteredOut?: boolean;
   onShowAll?: () => void;
+  onAdjustFilters?: () => void;
   found?: number;
+  liveFailed?: boolean;
 }) {
   return (
     <div
@@ -30,6 +34,8 @@ export function EmptyState({
             ? filteredOut
               ? "Ingen opslag matcher filtrene"
               : "Ingen sociale opslag i området"
+            : liveFailed
+              ? "Kunne ikke hente boliger"
             : "Ingen boliger matcher"}
       </p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
@@ -39,6 +45,8 @@ export function EmptyState({
             ? filteredOut
               ? "Der er opslag i området, men pris, type eller andre filtre gemmer dem. Prøv at hæve maksprisen."
               : "Lyt kigger fulgte Instagram- og TikTok-konti, dine tags, plus GulogGratis, DBA og privat selvsalg."
+            : liveFailed
+              ? "Søgningen i denne kommune svarede ikke. Prøv igen om et øjeblik, eller åbn filtrene."
             : "Prøv at hæve maksprisen, ryd bydele og kortudsnit, eller vælg en anden by."}
       </p>
       {!saved && (!listen || filteredOut) ? (
@@ -46,7 +54,10 @@ export function EmptyState({
           {listen && onShowAll ? <Button onClick={onShowAll}>Vis alle {found}</Button> : null}
           <Button
             variant={listen && onShowAll ? "outline" : "primary"}
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={() => {
+              onAdjustFilters?.();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           >
             Justér filtre
           </Button>

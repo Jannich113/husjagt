@@ -9,7 +9,7 @@ import http from "node:http";
 import { chromium } from "playwright";
 
 const SOCKET = process.env.LISTINGS_PROXY_SOCKET || "/tmp/listings-proxy.sock";
-const TTL_MS = 90_000;
+const TTL_MS = 10 * 60_000;
 const ALLOWED_HOSTS = new Set([
   "api.boligsiden.dk",
   "api.boliga.dk",

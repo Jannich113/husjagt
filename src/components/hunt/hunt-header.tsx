@@ -31,6 +31,8 @@ export function HuntHeader({
   onView,
   onToggleListenAll,
   onStreetQuery,
+  filtersOpen,
+  onFiltersOpenChange,
 }: {
   view: HuntView;
   filters: SearchFilters;
@@ -49,6 +51,8 @@ export function HuntHeader({
   onView: (next: HuntView) => void;
   onToggleListenAll: () => void;
   onStreetQuery: (next: string) => void;
+  filtersOpen?: boolean;
+  onFiltersOpenChange?: (open: boolean) => void;
 }) {
   const [areaOpen, setAreaOpen] = useState(false);
   const areaBits = [placeLabel(filters), streetQuery || null, extras[0] ?? null].filter(Boolean);
@@ -75,6 +79,8 @@ export function HuntHeader({
             onChange={onApply}
             count={view === "listen" ? listenMatched : resultHits}
             catalog={catalog}
+            open={filtersOpen}
+            onOpenChange={onFiltersOpenChange}
           />
         </div>
       </div>
