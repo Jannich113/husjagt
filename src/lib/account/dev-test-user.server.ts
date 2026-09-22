@@ -1,6 +1,9 @@
-import { hashPassword } from "better-auth/crypto";
 import { getSql } from "@/lib/db";
 import { DEV_TEST_LOGIN } from "./dev-test-user";
+
+/** Precomputed Better Auth scrypt hash of `test` — avoid blocking the event loop on boot. */
+const TEST_PASSWORD_HASH =
+  "54c1903588f3d4d65da5ed4272656b85:af6e5b1bafa42af1479ba6c2ef98d1c91ebe51f901d847b883fd9d15ea3c3c56b983c8f050ed84dd7133f8c877c24dc7fffc18394d2ad6ee3c2aa5c843bc668e";
 
 export async function seedDevTestAccount() {
   if (process.env.DATABASE_URL?.trim()) return;
@@ -17,13 +20,6 @@ export async function seedDevTestAccount() {
     )
     on conflict (id) do nothing
   `;
-  const accounts = await sql<{ id: string }>`
-    select id from "account"
-    where "userId" = ${DEV_TEST_LOGIN.id} and "providerId" = 'credential'
-    limit 1
-  `;
-  if (accounts.length) return;
-  const password = await hashPassword(DEV_TEST_LOGIN.password);
   await sql`
     insert into "account" (
       id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt"
@@ -33,7 +29,7 @@ export async function seedDevTestAccount() {
       ${DEV_TEST_LOGIN.id},
       'credential',
       ${DEV_TEST_LOGIN.id},
-      ${password},
+      ${TEST_PASSWORD_HASH},
       now(),
       now()
     )

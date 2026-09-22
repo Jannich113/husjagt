@@ -67,7 +67,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [social, setSocial] = useState<SocialListenResult>({ listings: [], all: [], found: 0, live: false, sources: [] });
   const [socialReady, setSocialReady] = useState(false);
   const [listenAll, setListenAll] = useState(false);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(() => initial.listings.length < 4);
   const [moreBusy, setMoreBusy] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -174,11 +174,17 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
 
   useEffect(() => {
     let alive = true;
-    setBusy(true);
     setPage(1);
     setOpenListing(null);
     const cached = loadOfflineSearch(filters.municipality);
-    setResult(cached?.result ?? { ...EMPTY_SEARCH, source: "Henter live boliger…" });
+    const seed = cached?.result?.listings.length ? cached.result : initial.listings.length ? initial : null;
+    if (seed?.listings.length) {
+      setResult(seed);
+      setBusy(false);
+    } else {
+      setBusy(true);
+      setResult({ ...EMPTY_SEARCH, source: "Henter live boliger…" });
+    }
     void searchHouses({ data: { ...filters, page: 1 } })
       .then((houses) => {
         if (!alive) return;
@@ -214,7 +220,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   }
 
   useEffect(() => {
-    if (!watchReady) return;
+    if (!watchReady || view !== "listen") return;
     let alive = true;
     setSocialReady(false);
     void listenSocial({
@@ -232,13 +238,12 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         setSocialReady(true);
       })
       .catch(() => {
-        if (!alive) return;
-        setSocialReady(true);
+        if (alive) setSocialReady(true);
       });
     return () => {
       alive = false;
     };
-  }, [filters, watchReady, socialAccounts, socialTags]);
+  }, [filters, watchReady, socialAccounts, socialTags, view]);
 
   function apply(next: SearchFilters) {
     void navigate({ search: huntFromFilters(next, view, { q: streetQuery }) });

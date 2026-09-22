@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { applyHuntBlob, blobIsNewer, collectHuntBlob } from "@/lib/account/blob";
-import { loadHuntBlob, saveHuntBlob } from "@/lib/account/blob.server";
+import { loadHuntBlob, saveHuntBlob } from "@/lib/account/hunt-blob";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useFavorites } from "@/lib/listings/favorites";
 import { useFirstSeen } from "@/lib/listings/fresh";
@@ -48,23 +48,26 @@ export function HuntSync() {
     if (isPending || !userId || armed.current === userId) return;
     armed.current = userId;
     let alive = true;
-    void loadHuntBlob()
-      .then((remote) => {
-        if (!alive) return;
-        const local = localStamp();
-        if (blobIsNewer(remote, local) && remote) {
-          applyHuntBlob(remote);
-          setLocalStamp(remote.savedAt);
-          rehydrateLocalStores();
-          return;
-        }
-        const payload = collectHuntBlob();
-        setLocalStamp(payload.savedAt);
-        return saveHuntBlob({ data: payload });
-      })
-      .catch(() => {
-        /* stay local */
-      });
+    const start = window.setTimeout(() => {
+      if (!alive) return;
+      void loadHuntBlob()
+        .then((remote) => {
+          if (!alive) return;
+          const local = localStamp();
+          if (blobIsNewer(remote, local) && remote) {
+            applyHuntBlob(remote);
+            setLocalStamp(remote.savedAt);
+            rehydrateLocalStores();
+            return;
+          }
+          const payload = collectHuntBlob();
+          setLocalStamp(payload.savedAt);
+          return saveHuntBlob({ data: payload });
+        })
+        .catch(() => {
+          /* stay local */
+        });
+    }, 1500);
     const timer = window.setInterval(() => {
       const payload = collectHuntBlob();
       setLocalStamp(payload.savedAt);
@@ -79,6 +82,7 @@ export function HuntSync() {
     window.addEventListener("pagehide", onHide);
     return () => {
       alive = false;
+      window.clearTimeout(start);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", onHide);
