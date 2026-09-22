@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EMPTY_SEARCH } from "@/lib/hunt/ports";
 import { moduleOn } from "@/lib/hunt/modules";
@@ -61,7 +61,9 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const navigate = useNavigate({ from: "/" });
   const filters = useMemo(() => filtersFromHunt(JSON.parse(huntKey) as HuntSearch), [huntKey]);
   const streetQuery = hunt.q ?? "";
-  const [view, setView] = useState<HuntView>(() => storedView(viewFromHunt(hunt)));
+  const [view, setView] = useState<HuntView>(() =>
+    hunt.view ? viewFromHunt(hunt) : storedView(viewFromHunt(hunt)),
+  );
   const [openListing, setOpenListing] = useState<Listing | null>(null);
   const [result, setResult] = useState<SearchResult>(initial);
   const [social, setSocial] = useState<SocialListenResult>({ listings: [], all: [], found: 0, live: false, sources: [] });
@@ -172,39 +174,44 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     };
   }, [filters.municipality]);
 
+  const firstSearch = useRef(true);
+
   useEffect(() => {
     let alive = true;
-    setPage(1);
-    setOpenListing(null);
-    const cached = loadOfflineSearch(filters.municipality);
-    const seed = cached?.result?.listings.length ? cached.result : initial.listings.length ? initial : null;
-    if (seed?.listings.length) {
-      setResult(seed);
-      setBusy(false);
-    } else {
-      setBusy(true);
-      setResult({ ...EMPTY_SEARCH, source: "Henter live boliger…" });
+    const delay = firstSearch.current && initial.listings.length >= 4 ? 1600 : 0;
+    firstSearch.current = false;
+    if (delay === 0) {
+      setPage(1);
+      setOpenListing(null);
+      const cached = loadOfflineSearch(filters.municipality);
+      if (!cached?.result?.listings.length && !initial.listings.length) {
+        setBusy(true);
+        setResult({ ...EMPTY_SEARCH, source: "Henter live boliger…" });
+      }
     }
-    void searchHouses({ data: { ...filters, page: 1 } })
-      .then((houses) => {
-        if (!alive) return;
-        setResult(houses);
-        saveOfflineSearch(filters, houses);
-        setHasMore(houses.listings.length >= filters.perPage || houses.totalHits > houses.listings.length);
-      })
-      .catch(() => {
-        if (!alive) return;
-        const fallback = loadOfflineSearch(filters.municipality);
-        if (fallback) setResult(fallback.result);
-        setHasMore(false);
-      })
-      .finally(() => {
-        if (alive) setBusy(false);
-      });
+    const timer = window.setTimeout(() => {
+      void searchHouses({ data: { ...filters, page: 1 } })
+        .then((houses) => {
+          if (!alive) return;
+          setResult(houses);
+          saveOfflineSearch(filters, houses);
+          setHasMore(houses.listings.length >= filters.perPage || houses.totalHits > houses.listings.length);
+        })
+        .catch(() => {
+          if (!alive) return;
+          const fallback = loadOfflineSearch(filters.municipality);
+          if (fallback) setResult(fallback.result);
+          setHasMore(false);
+        })
+        .finally(() => {
+          if (alive) setBusy(false);
+        });
+    }, delay);
     return () => {
       alive = false;
+      window.clearTimeout(timer);
     };
-  }, [filters]);
+  }, [filters, initial.listings.length]);
 
   function loadMore() {
     if (moreBusy || !hasMore) return;

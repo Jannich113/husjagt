@@ -44,6 +44,8 @@ async function assertResponsive(page, step) {
 }
 
 async function viewButton(page, label) {
+  const link = page.getByRole("link", { name: label, exact: true });
+  if (await link.count()) return link;
   return page.getByRole("button", { name: label, exact: true });
 }
 

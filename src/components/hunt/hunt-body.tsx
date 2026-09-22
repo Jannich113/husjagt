@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { HouseCard } from "@/components/listings/house-card";
 import { HouseDetail } from "@/components/listings/house-detail";
 import { VideoRail } from "@/components/listings/reel-feed";
@@ -72,6 +73,19 @@ export function HuntBody({
 }) {
   const wide = useMinWidth(HUNT_WIDE_PX);
   const waiting = busy && listings.length < 4 && view !== "saved";
+  const stamp = listings[0]?.id ?? "";
+  const [painted, setPainted] = useState(12);
+  useEffect(() => {
+    setPainted(12);
+  }, [stamp]);
+  useEffect(() => {
+    if (painted >= listings.length) return;
+    const timer = window.setTimeout(() => {
+      setPainted((count) => Math.min(listings.length, count + 16));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [painted, listings.length]);
+  const rows = view === "list" || view === "saved" ? listings.slice(0, painted) : listings;
 
   if (view === "listen") {
     return (
@@ -134,7 +148,16 @@ export function HuntBody({
 
   return (
     <div className={cn("hunt-split", openListing && "is-open")} onWheel={forwardWheelToList}>
-      <div className="hunt-list-pane p-3">
+      <div
+        className="hunt-list-pane p-3"
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          if (painted >= listings.length) return;
+          if (el.scrollTop + el.clientHeight > el.scrollHeight - 320) {
+            setPainted((count) => Math.min(listings.length, count + 16));
+          }
+        }}
+      >
         {view === "list" && playableVideos.length ? (
           <VideoRail
             listings={playableVideos}
@@ -143,7 +166,7 @@ export function HuntBody({
           />
         ) : null}
         <div className="flex flex-col gap-2">
-          {listings.map((listing) => (
+          {rows.map((listing) => (
             <HouseCard
               key={listing.id}
               listing={listing}

@@ -447,6 +447,11 @@
   background: var(--color-bg);
 }
 
+.hunt-shell button,
+.hunt-shell a {
+  touch-action: manipulation;
+}
+
 .hunt-body {
   display: flex;
   min-height: 0;
@@ -468,6 +473,11 @@
   overflow-x: hidden;
   overflow-y: auto;
   background: var(--color-bg);
+}
+
+.hunt-list-pane article {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
 }
 
 .hunt-map-pane {
