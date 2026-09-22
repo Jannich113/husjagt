@@ -1,4 +1,3 @@
-import { LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EMPTY_SEARCH } from "@/lib/hunt/ports";
@@ -257,6 +256,8 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         ? listenAll
           ? `${listenShown.length} opslag`
           : listenCountLabel(listenMatched.length, listenFound)
+        : busy && listings.length < 4
+          ? "Henter boliger…"
         : listings.length !== (filters.freshOnly ? pool.length : result.totalHits) || streetQuery || keywordWords.length
           ? `${listings.length} af ${filters.freshOnly ? pool.length : result.totalHits} boliger`
           : `${filters.freshOnly ? listings.length : result.totalHits} boliger`;
@@ -302,13 +303,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         onFiltersOpenChange={setFiltersOpen}
       />
 
-      {busy || (view === "listen" && !socialReady && !playableVideos.length) ? (
-        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
-          <LoaderCircle className="size-4 animate-spin" />
-          {view === "listen" ? "Lytter efter opslag…" : "Henter boliger…"}
-        </div>
-      ) : null}
-
       <div className="hunt-body">
         <HuntBody
           view={view}
@@ -328,6 +322,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
           hasMore={view !== "saved" && view !== "listen" && hasMore}
           moreBusy={moreBusy}
           live={result.live}
+          busy={busy || (view === "listen" && !socialReady && !playableVideos.length)}
           onOpenHouse={openHouse}
           onOpenHouseId={openHouseId}
           onCloseHouse={() => setOpenListing(null)}

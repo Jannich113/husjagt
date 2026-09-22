@@ -549,6 +549,60 @@
   color: var(--color-muted);
 }
 
+.hunt-loading {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--color-bg);
+}
+
+.hunt-loading-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 1rem 0;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid color-mix(in oklab, var(--color-primary) 35%, var(--color-border));
+  border-radius: 1.25rem;
+  background: color-mix(in oklab, var(--color-primary) 10%, var(--color-surface));
+}
+
+.hunt-loading-compact {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.hunt-map-loading {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  left: 0.75rem;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.hunt-skel-card {
+  height: 6.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(
+    90deg,
+    var(--color-sunken) 0%,
+    color-mix(in oklab, var(--color-surface) 70%, white) 45%,
+    var(--color-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: huntSkel 1.2s ease-in-out infinite;
+}
+
+@keyframes huntSkel {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 .reel-ken {
   animation: reelKen 14s ease-in-out infinite alternate;
   transform-origin: center;

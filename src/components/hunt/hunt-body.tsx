@@ -10,6 +10,7 @@ import type { GeoBounds, Listing, SearchFilters } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 import { ClientMap } from "./client-map";
 import { EmptyState } from "./empty-state";
+import { HuntLoading } from "./hunt-loading";
 import { ListenView } from "./listen-view";
 import { LoadMore } from "./load-more";
 import { forwardWheelToList } from "./wheel";
@@ -32,6 +33,7 @@ export function HuntBody({
   hasMore,
   moreBusy,
   live,
+  busy,
   onOpenHouse,
   onOpenHouseId,
   onCloseHouse,
@@ -58,6 +60,7 @@ export function HuntBody({
   hasMore: boolean;
   moreBusy: boolean;
   live: boolean;
+  busy: boolean;
   onOpenHouse: (listing: Listing) => void;
   onOpenHouseId: (id: string) => void;
   onCloseHouse: () => void;
@@ -68,6 +71,7 @@ export function HuntBody({
   onAdjustFilters: () => void;
 }) {
   const wide = useMinWidth(HUNT_WIDE_PX);
+  const waiting = busy && listings.length < 4 && view !== "saved";
 
   if (view === "listen") {
     return (
@@ -98,6 +102,11 @@ export function HuntBody({
             catalog={catalog}
             onAreaChange={onAreaChange}
           />
+          {waiting ? (
+            <div className="hunt-map-loading">
+              <HuntLoading place={kommuneName} compact />
+            </div>
+          ) : null}
         </div>
         {openListing ? (
           <aside className="hunt-support-pane">
@@ -106,6 +115,10 @@ export function HuntBody({
         ) : null}
       </div>
     );
+  }
+
+  if (waiting) {
+    return <HuntLoading place={kommuneName} />;
   }
 
   if (listings.length === 0) {
