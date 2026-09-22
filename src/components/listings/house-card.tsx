@@ -2,7 +2,7 @@ import { EyeOff, Heart, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { ListingPhoto } from "@/components/listings/listing-photo";
-import { useFavorites } from "@/lib/listings/favorites";
+import { UnsaveDialog, useFavoriteAction } from "@/components/listings/unsave-dialog";
 import { useHidden } from "@/lib/listings/hidden";
 import { formatDays, formatKr, formatM2, formatRooms, sourceLabel, typeLabel } from "@/lib/listings/format";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
@@ -67,9 +67,7 @@ export function HouseCard({
   selected?: boolean;
   layout?: "card" | "row";
 }) {
-  const saved = useFavorites((s) => s.ids.includes(listing.id));
-  const toggle = useFavorites((s) => s.toggle);
-  const note = useFavorites((s) => s.notes[listing.id]);
+  const { saved, note, ask, onToggle, confirm, cancel } = useFavoriteAction(listing);
   const hidden = useHidden((s) => s.ids.includes(listing.id));
   const hide = useHidden((s) => s.hide);
   const unhide = useHidden((s) => s.unhide);
@@ -83,6 +81,7 @@ export function HouseCard({
 
   if (layout === "row") {
     return (
+      <>
       <article
         className={cn(
           "overflow-hidden rounded-lg border bg-surface",
@@ -134,7 +133,7 @@ export function HouseCard({
           <button
             type="button"
             aria-label={saved ? "Fjern fra gemte" : "Gem bolig"}
-            onClick={() => toggle(listing)}
+            onClick={onToggle}
             className={cn(
               "mt-1 flex size-11 shrink-0 items-center justify-center rounded-full border border-border",
               saved ? "bg-heart text-primary-fg" : "bg-surface text-muted",
@@ -158,10 +157,15 @@ export function HouseCard({
           </div>
         </div>
       </article>
+      {ask && note ? (
+        <UnsaveDialog street={listing.street} note={note} onCancel={cancel} onConfirm={confirm} />
+      ) : null}
+    </>
     );
   }
 
   return (
+    <>
     <article
       className={cn(
         "overflow-hidden rounded-xl border bg-surface shadow-card",
@@ -232,7 +236,7 @@ export function HouseCard({
         <button
           type="button"
           aria-label={saved ? "Fjern fra gemte" : "Gem bolig"}
-          onClick={() => toggle(listing)}
+          onClick={onToggle}
           className={cn(
             "flex size-11 shrink-0 items-center justify-center rounded-full border border-border",
             saved ? "bg-heart text-primary-fg" : "bg-surface text-muted",
@@ -255,6 +259,10 @@ export function HouseCard({
         ) : null}
       </div>
     </article>
+      {ask && note ? (
+        <UnsaveDialog street={listing.street} note={note} onCancel={cancel} onConfirm={confirm} />
+      ) : null}
+    </>
   );
 }
 

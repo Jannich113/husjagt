@@ -6,9 +6,9 @@ import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { SavedNote } from "@/components/listings/saved-note";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
+import { UnsaveDialog, useFavoriteAction } from "@/components/listings/unsave-dialog";
 import { Button } from "@/components/ui/button";
 import { moduleOn } from "@/lib/hunt/modules";
-import { useFavorites } from "@/lib/listings/favorites";
 import { useHidden } from "@/lib/listings/hidden";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import {
@@ -45,8 +45,7 @@ export function HouseDetail({
   onBack: () => void;
   embedded?: boolean;
 }) {
-  const saved = useFavorites((s) => s.ids.includes(listing.id));
-  const toggle = useFavorites((s) => s.toggle);
+  const { saved, note, ask, onToggle, confirm, cancel } = useFavoriteAction(listing);
   const hidden = useHidden((s) => s.ids.includes(listing.id));
   const hide = useHidden((s) => s.hide);
   const unhide = useHidden((s) => s.unhide);
@@ -83,6 +82,7 @@ export function HouseDetail({
   }, [listing.id, listing.images?.length]);
 
   return (
+    <>
     <main className={cn("mx-auto bg-bg pb-16", embedded ? "max-w-none" : "min-h-dvh max-w-3xl")}>
       <div className="sticky top-0 z-20 flex items-center justify-between bg-bg/95 px-3 py-2 backdrop-blur">
         {embedded ? (
@@ -112,7 +112,7 @@ export function HouseDetail({
           />
           <button
             type="button"
-            onClick={() => toggle(listing)}
+            onClick={onToggle}
             className={cn(
               "flex size-11 items-center justify-center rounded-full border border-border",
               saved ? "bg-heart text-primary-fg" : "bg-surface text-muted",
@@ -245,6 +245,10 @@ export function HouseDetail({
         ) : null}
       </div>
     </main>
+    {ask && note ? (
+      <UnsaveDialog street={listing.street} note={note} onCancel={cancel} onConfirm={confirm} />
+    ) : null}
+    </>
   );
 }
 
