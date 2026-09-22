@@ -26,29 +26,38 @@ function houseMark(size, inset) {
   `;
 }
 
-async function raster(size, inset, outName) {
+async function rasterAll() {
   const browser = await chromium.launch({ args: ["--disable-web-security"] });
-  const page = await browser.newPage({
-    viewport: { width: size, height: size },
-    deviceScaleFactor: 1,
-  });
-  await page.setContent(
-    `<!doctype html><html><head><style>
-      html,body{margin:0;width:${size}px;height:${size}px;background:${BG};}
-    </style></head><body>
-      <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-        <rect width="${size}" height="${size}" fill="${BG}"/>
-        ${houseMark(size, inset)}
-      </svg>
-    </body></html>`,
-    { waitUntil: "load" },
-  );
-  const buf = await page.screenshot({ type: "png", omitBackground: false });
-  writeFileSync(join(ROOT, "public", outName), buf);
-  await browser.close();
-  console.log(`wrote public/${outName} (${size}×${size}, inset ${inset})`);
+  const jobs = [
+    [192, 0, "icon-192.png"],
+    [512, 0, "icon-512.png"],
+    [512, Math.round(512 * 0.12), "icon-maskable-512.png"],
+  ];
+  try {
+    for (const [size, inset, outName] of jobs) {
+      const page = await browser.newPage({
+        viewport: { width: size, height: size },
+        deviceScaleFactor: 1,
+      });
+      await page.setContent(
+        `<!doctype html><html><head><style>
+          html,body{margin:0;width:${size}px;height:${size}px;background:${BG};}
+        </style></head><body>
+          <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+            <rect width="${size}" height="${size}" fill="${BG}"/>
+            ${houseMark(size, inset)}
+          </svg>
+        </body></html>`,
+        { waitUntil: "load" },
+      );
+      const buf = await page.screenshot({ type: "png", omitBackground: false });
+      writeFileSync(join(ROOT, "public", outName), buf);
+      await page.close();
+      console.log(`wrote public/${outName} (${size}×${size}, inset ${inset})`);
+    }
+  } finally {
+    await browser.close();
+  }
 }
 
-await raster(192, 0, "icon-192.png");
-await raster(512, 0, "icon-512.png");
-await raster(512, Math.round(512 * 0.12), "icon-maskable-512.png");
+await rasterAll();

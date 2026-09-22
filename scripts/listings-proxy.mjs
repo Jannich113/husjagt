@@ -54,38 +54,92 @@ async function getContext() {
   return context;
 }
 
-async function fetchUpstream(url, html) {
-  const key = `${html ? "html:" : ""}${url}`;
-  const hit = cache.get(key);
-  if (hit && hit.expires > Date.now()) return hit;
-  const ctx = await getContext();
-  const page = await ctx.newPage();
-  try {
-    const res = await page.goto(url, {
+/** @type {import('playwright').Page | null} */
+let sharedPage = null;
+/** Serialize page navigations — one Chromium page, not one per request. */
+let pageChain = Promise.resolve();
+
+function withPage(run) {
+  const next = pageChain.then(run, run);
+  pageChain = next.then(
+    () => {},
+    () => {},
+  );
+  return next;
+}
+
+async function pageFetch(url, html) {
+  return withPage(async () => {
+    const ctx = await getContext();
+    if (!sharedPage || sharedPage.isClosed()) {
+      sharedPage = await ctx.newPage();
+      await sharedPage.route("**/*", (route) => {
+        const type = route.request().resourceType();
+        if (type === "image" || type === "media" || type === "font") return route.abort();
+        return route.continue();
+      });
+    }
+    const res = await sharedPage.goto(url, {
       waitUntil: "domcontentloaded",
-      timeout: 25_000,
+      timeout: 20_000,
     });
-    if (html) await page.waitForTimeout(2500);
+    if (html) {
+      await sharedPage
+        .waitForFunction(() => (document.body?.innerText?.length ?? 0) > 80, { timeout: 2500 })
+        .catch(() => {});
+    }
     const status = res?.status() ?? 502;
     const typeHeader = res?.headers()["content-type"] || "text/html";
     const body = html
-      ? await page.content()
-      : await page.evaluate(() => document.body?.innerText ?? "");
-    const entry = {
-      expires: Date.now() + TTL_MS,
-      body,
+      ? await sharedPage.content()
+      : await sharedPage.evaluate(() => document.body?.innerText ?? "");
+    return {
       status,
+      body,
       type: html
         ? "text/html; charset=utf-8"
         : typeHeader.includes("json")
           ? "application/json; charset=utf-8"
           : typeHeader,
     };
-    if (status === 200) cache.set(key, entry);
-    return entry;
-  } finally {
-    await page.close().catch(() => {});
+  });
+}
+
+function looksBlocked(status, body) {
+  if (status === 403 || status === 429 || status === 503) return true;
+  const head = body.slice(0, 200).toLowerCase();
+  return head.includes("<!doctype") || head.includes("just a moment") || head.includes("cf-browser-verification");
+}
+
+async function fetchUpstream(url, html) {
+  const key = `${html ? "html:" : ""}${url}`;
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit;
+
+  let entry;
+  if (!html) {
+    const ctx = await getContext();
+    const res = await ctx.request.get(url, { timeout: 15_000, failOnStatusCode: false });
+    const body = await res.text();
+    const status = res.status();
+    const typeHeader = res.headers()["content-type"] || "";
+    if (!looksBlocked(status, body) && body.length > 0) {
+      entry = {
+        status,
+        body,
+        type: typeHeader.includes("json") || body.trimStart().startsWith("{") || body.trimStart().startsWith("[")
+          ? "application/json; charset=utf-8"
+          : typeHeader || "text/plain; charset=utf-8",
+      };
+    }
   }
+  if (!entry) {
+    const fetched = await pageFetch(url, html);
+    entry = fetched;
+  }
+  const stored = { ...entry, expires: Date.now() + TTL_MS };
+  if (stored.status === 200) cache.set(key, stored);
+  return stored;
 }
 
 function json(res, code, data) {
