@@ -4,6 +4,7 @@ import { EnergyBadge } from "@/components/listings/energy-badge";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { UnsaveDialog, useFavoriteAction } from "@/components/listings/unsave-dialog";
 import { useHidden } from "@/lib/listings/hidden";
+import { useSearchAlerts } from "@/lib/listings/search-alerts";
 import { formatDays, formatKr, formatM2, formatRooms, sourceLabel, typeLabel } from "@/lib/listings/format";
 import { freshnessLabel, listingFreshness, useFirstSeen } from "@/lib/listings/fresh";
 import { matchedKeywords, useKeywords } from "@/lib/listings/keywords";
@@ -69,6 +70,7 @@ export function HouseCard({
 }) {
   const { saved, note, ask, onToggle, confirm, cancel } = useFavoriteAction(listing);
   const hidden = useHidden((s) => s.ids.includes(listing.id));
+  const alertNew = useSearchAlerts((s) => s.newIds.includes(listing.id));
   const hide = useHidden((s) => s.hide);
   const unhide = useHidden((s) => s.unhide);
   const unseen = useSeen((s) => s.ready && !s.ids.includes(listing.id));
@@ -104,6 +106,10 @@ export function HouseCard({
               ) : unread ? (
                 <span className="absolute left-1 top-1">
                   <NewBadge compact />
+                </span>
+              ) : alertNew ? (
+                <span className="absolute left-1 top-1 rounded-full bg-warn px-1.5 py-0.5 text-xs font-medium text-primary-fg">
+                  Ny
                 </span>
               ) : null}
               {saved ? (
@@ -180,7 +186,9 @@ export function HouseCard({
             className="size-full object-cover"
           />
           <div className="absolute left-3 top-3 flex items-center gap-1.5">
-            {fresh ? <FreshBadge kind={fresh} /> : unread ? <NewBadge /> : null}
+            {fresh ? <FreshBadge kind={fresh} /> : unread ? <NewBadge /> : alertNew ? (
+              <span className="rounded-full bg-warn px-2.5 py-1 text-xs font-medium text-primary-fg">Ny i søgning</span>
+            ) : null}
             <span className="rounded-full bg-fg/80 px-2.5 py-1 text-xs font-medium text-primary-fg">
               {typeLabel(listing.type)}
             </span>

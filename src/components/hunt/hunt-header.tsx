@@ -13,6 +13,7 @@ import type { SearchFilters } from "@/lib/listings/types";
 import { cn } from "@/lib/utils";
 import { ListenAllButton } from "./listen-view";
 import { ViewTab } from "./view-tab";
+import { WatchSearchButton } from "./watch-search";
 
 export function HuntHeader({
   view,
@@ -37,6 +38,8 @@ export function HuntHeader({
   showHidden = false,
   onToggleHidden,
   onClearHidden,
+  listingIds = [],
+  onOpenWatched,
 }: {
   view: HuntView;
   filters: SearchFilters;
@@ -61,6 +64,8 @@ export function HuntHeader({
   showHidden?: boolean;
   onToggleHidden?: () => void;
   onClearHidden?: () => void;
+  listingIds?: string[];
+  onOpenWatched?: () => void;
 }) {
   const [areaOpen, setAreaOpen] = useState(false);
   const areaBits = [placeLabel(filters), streetQuery || null, extras[0] ?? null].filter(Boolean);
@@ -144,6 +149,9 @@ export function HuntHeader({
           ) : null}
         </div>
         <p className="text-sm tabular-nums text-muted">{countLabel}</p>
+        {view !== "listen" && view !== "saved" ? (
+          <WatchSearchButton filters={filters} ids={listingIds} onOpenWatched={onOpenWatched ?? (() => {})} />
+        ) : null}
         {moduleOn("dismiss") && hiddenCount > 0 && view !== "listen" ? (
           <>
             <button

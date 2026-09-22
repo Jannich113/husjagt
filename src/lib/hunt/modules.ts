@@ -15,6 +15,7 @@ export const HUNT_MODULES = {
   photoGallery: { enabled: true, label: "Fotogalleri på boligen" },
   dismiss: { enabled: true, label: "Skjul boliger" },
   notes: { enabled: true, label: "Noter på gemte boliger" },
+  searchAlerts: { enabled: true, label: "Overvåg søgning" },
 } as const;
 
 export type HuntModuleId = keyof typeof HUNT_MODULES;

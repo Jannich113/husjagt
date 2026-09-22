@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EMPTY_SEARCH } from "@/lib/hunt/ports";
+import { moduleOn } from "@/lib/hunt/modules";
 import { visibleListings } from "@/lib/hunt/visible";
 import { appendSearchPage } from "@/lib/listings/aggregate";
 import { useFavorites } from "@/lib/listings/favorites";
 import { useHidden } from "@/lib/listings/hidden";
+import {
+  ALERTS_INTERVAL_MS,
+  notifyNewListings,
+  useSearchAlerts,
+} from "@/lib/listings/search-alerts";
 import { useFirstSeen } from "@/lib/listings/fresh";
 import { useKeywords } from "@/lib/listings/keywords";
 import { placeLabel } from "@/lib/listings/place";
@@ -85,6 +91,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const socialAccounts = useSocialWatch((s) => s.accounts);
   const socialTags = useSocialWatch((s) => s.tags);
   const hydrateKeywords = useKeywords((s) => s.hydrate);
+  const hydrateAlerts = useSearchAlerts((s) => s.hydrate);
   const keywordWords = useKeywords((s) => s.words);
   const keywordMode = useKeywords((s) => s.mode);
   const savedItems = useMemo(
@@ -100,9 +107,40 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     hydrateFirstSeen();
     hydrateWatch();
     hydrateKeywords();
+    hydrateAlerts();
     document.body.style.removeProperty("pointer-events");
     document.body.style.removeProperty("overflow");
-  }, [hydrate, hydrateSeen, hydrateHidden, hydrateFirstSeen, hydrateWatch, hydrateKeywords]);
+  }, [hydrate, hydrateSeen, hydrateHidden, hydrateFirstSeen, hydrateWatch, hydrateKeywords, hydrateAlerts]);
+
+  useEffect(() => {
+    if (!moduleOn("searchAlerts")) return;
+    let alive = true;
+    async function tick() {
+      const state = useSearchAlerts.getState();
+      if (!state.enabled || !state.filters) return;
+      try {
+        const houses = await searchHouses({ data: { ...state.filters, page: 1 } });
+        if (!alive) return;
+        const fresh = useSearchAlerts.getState().ingest(houses.listings.map((row) => row.id));
+        if (fresh.length && useSearchAlerts.getState().notify) {
+          notifyNewListings(fresh.length, placeLabel(state.filters));
+        }
+      } catch {
+        /* next interval */
+      }
+    }
+    void tick();
+    const timer = window.setInterval(() => void tick(), ALERTS_INTERVAL_MS);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   useEffect(() => {
     rememberHunt(hunt);
@@ -319,6 +357,11 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
         onClearHidden={() => {
           clearHidden();
           setShowHidden(false);
+        }}
+        listingIds={result.listings.map((row) => row.id)}
+        onOpenWatched={() => {
+          const watched = useSearchAlerts.getState().filters;
+          if (watched) void navigate({ search: huntFromFilters(watched, "list") });
         }}
       />
 
