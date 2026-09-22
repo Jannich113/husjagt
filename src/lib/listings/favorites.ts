@@ -12,10 +12,14 @@ type FavState = {
   has: (id: string) => boolean;
 };
 
+function canStore(): boolean {
+  return typeof globalThis.localStorage?.getItem === "function";
+}
+
 function readStorage(): Pick<FavState, "ids" | "items"> {
-  if (typeof window === "undefined") return { ids: [], items: {} };
+  if (!canStore()) return { ids: [], items: {} };
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = globalThis.localStorage.getItem(KEY);
     if (!raw) return { ids: [], items: {} };
     const parsed = JSON.parse(raw) as { ids?: string[]; items?: Record<string, Listing> };
     return { ids: parsed.ids ?? [], items: parsed.items ?? {} };
@@ -25,8 +29,8 @@ function readStorage(): Pick<FavState, "ids" | "items"> {
 }
 
 function writeStorage(ids: string[], items: Record<string, Listing>) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify({ ids, items }));
+  if (!canStore()) return;
+  globalThis.localStorage.setItem(KEY, JSON.stringify({ ids, items }));
 }
 
 export const useFavorites = create<FavState>((set, get) => ({

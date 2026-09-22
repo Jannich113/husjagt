@@ -1,6 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { appendSearchPage } from "@/lib/listings/aggregate";
 import { visibleListings } from "@/lib/hunt/visible";
 import { useFavorites } from "@/lib/listings/favorites";
 import { useFirstSeen } from "@/lib/listings/fresh";
@@ -58,6 +59,9 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [socialReady, setSocialReady] = useState(false);
   const [listenAll, setListenAll] = useState(false);
   const [busy, setBusy] = useState(true);
+  const [moreBusy, setMoreBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [areaDistricts, setAreaDistricts] = useState<District[]>(() => districtsForKommune("odense"));
   const [reelFocus, setReelFocus] = useState<string | null>(null);
   const savedIds = useFavorites((s) => s.ids);
@@ -115,16 +119,19 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   useEffect(() => {
     let alive = true;
     setBusy(true);
-    void searchHouses({ data: filters })
+    setPage(1);
+    void searchHouses({ data: { ...filters, page: 1 } })
       .then((houses) => {
         if (!alive) return;
         setResult(houses);
         saveOfflineSearch(filters, houses);
+        setHasMore(houses.listings.length >= filters.perPage || houses.totalHits > houses.listings.length);
       })
       .catch(() => {
         if (!alive) return;
         const cached = loadOfflineSearch();
         if (cached) setResult(cached.result);
+        setHasMore(false);
       })
       .finally(() => {
         if (alive) setBusy(false);
@@ -133,6 +140,19 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       alive = false;
     };
   }, [filters]);
+
+  function loadMore() {
+    if (moreBusy || !hasMore) return;
+    const next = page + 1;
+    setMoreBusy(true);
+    void searchHouses({ data: { ...filters, page: next } })
+      .then((extra) => {
+        setResult((current) => appendSearchPage(current, extra));
+        setPage(next);
+        setHasMore(extra.listings.length >= filters.perPage);
+      })
+      .finally(() => setMoreBusy(false));
+  }
 
   useEffect(() => {
     if (!watchReady) return;
@@ -286,12 +306,16 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
           listenAll={listenAll}
           reelFocus={reelFocus}
           playableVideos={playableVideos}
+          totalHits={result.totalHits}
+          hasMore={view !== "saved" && view !== "listen" && hasMore}
+          moreBusy={moreBusy}
           onOpenHouse={openHouse}
           onOpenHouseId={openHouseId}
           onCloseHouse={() => setOpenListing(null)}
           onAreaChange={applyArea}
           onView={goView}
           onToggleListenAll={() => setListenAll((value) => !value)}
+          onLoadMore={loadMore}
         />
       </div>
     </div>

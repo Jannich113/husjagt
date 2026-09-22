@@ -1,6 +1,6 @@
 import { mergeSearchResults } from "@/lib/listings/aggregate";
 import { applyLocalFilters } from "@/lib/listings/boligsiden.server";
-import type { SearchFilters, SearchResult } from "@/lib/listings/types";
+import { usesClientOnlyFilters, type SearchFilters, type SearchResult } from "@/lib/listings/types";
 import { EMPTY_SEARCH, type HuntServices } from "./ports";
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -21,9 +21,10 @@ export async function runHuntSearch(services: HuntServices, filters: SearchFilte
       { ...EMPTY_SEARCH, source: catalog.id, sources: [] },
     ),
   );
-  const classifiedsJob = services.classifieds
-    ? withTimeout(services.classifieds.search(filters).catch(() => []), services.classifieds.timeoutMs, [])
-    : Promise.resolve([]);
+  const classifiedsJob =
+    filters.page > 1 || !services.classifieds
+      ? Promise.resolve([])
+      : withTimeout(services.classifieds.search(filters).catch(() => []), services.classifieds.timeoutMs, []);
   const districtsJob = withTimeout(services.places.districts(filters.municipality).catch(() => []), 4000, []);
 
   const [parts, classifieds, districts] = await Promise.all([
@@ -34,7 +35,8 @@ export async function runHuntSearch(services: HuntServices, filters: SearchFilte
   if (districts.length) services.places.remember?.(filters.municipality, districts);
   const merged = mergeSearchResults(filters, parts, classifieds);
   const listings = applyLocalFilters(merged.listings, filters);
-  return { ...merged, listings, totalHits: listings.length };
+  const totalHits = usesClientOnlyFilters(filters) ? listings.length : Math.max(merged.totalHits, listings.length);
+  return { ...merged, listings, totalHits };
 }
 
 export async function runGetListing(services: HuntServices, id: string) {

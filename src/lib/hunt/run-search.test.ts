@@ -129,4 +129,30 @@ describe("hunt DI kernel", () => {
     await runHuntSearch(services, aarhus);
     assert.deepEqual(seen, ["aarhus"]);
   });
+
+  it("keeps catalog totalHits and skips classifieds on later pages", async () => {
+    let classifiedCalls = 0;
+    const page1 = house({ id: "p1", street: "Åboulevarden 1", source: "boligsiden" });
+    const services = kernel({
+      catalogs: [
+        {
+          id: "boligsiden",
+          timeoutMs: 50,
+          search: async () => ({ totalHits: 214, listings: [page1], live: true, source: "Boligsiden", sources: ["Boligsiden"] }),
+        },
+      ],
+      classifieds: {
+        timeoutMs: 50,
+        search: async () => {
+          classifiedCalls += 1;
+          return [];
+        },
+      },
+    });
+    const first = await runHuntSearch(services, aarhus);
+    assert.equal(first.totalHits, 214);
+    assert.equal(classifiedCalls, 1);
+    await runHuntSearch(services, { ...aarhus, page: 2 });
+    assert.equal(classifiedCalls, 1);
+  });
 });

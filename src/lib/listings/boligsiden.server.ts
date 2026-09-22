@@ -180,6 +180,19 @@ export function snapshotSearch(filters: SearchFilters): SearchResult {
   };
 }
 
+function catalogTotal(rec: Record<string, unknown> | null, fallback: number): number {
+  if (!rec) return fallback;
+  for (const key of ["totalHits", "total", "hits", "count", "numberOfHits", "resultCount"]) {
+    const value = rec[key];
+    if (typeof value === "number" && Number.isFinite(value) && value >= fallback) return value;
+  }
+  const pagination = rec.pagination;
+  if (pagination && typeof pagination === "object") {
+    return catalogTotal(pagination as Record<string, unknown>, fallback);
+  }
+  return fallback;
+}
+
 export async function searchBoligsiden(filters: SearchFilters): Promise<SearchResult> {
   const payload = await readJson(buildSearchUrl(filters));
   const rec = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
@@ -196,8 +209,8 @@ export async function searchBoligsiden(filters: SearchFilters): Promise<SearchRe
     elevator: false,
   });
 
-  if (listings.length > 0 || (typeof rec?.totalHits === "number" && cases.length === 0)) {
-    const apiHits = typeof rec?.totalHits === "number" ? rec.totalHits : listings.length;
+  if (listings.length > 0 || catalogTotal(rec, 0) > 0) {
+    const apiHits = catalogTotal(rec, listings.length);
     return {
       totalHits: usesClientOnlyFilters(filters) ? listings.length : apiHits,
       listings,

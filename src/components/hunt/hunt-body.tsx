@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { ClientMap } from "./client-map";
 import { EmptyState } from "./empty-state";
 import { ListenView } from "./listen-view";
+import { LoadMore } from "./load-more";
 import { forwardWheelToList } from "./wheel";
 
 export function HuntBody({
@@ -25,12 +26,16 @@ export function HuntBody({
   listenAll,
   reelFocus,
   playableVideos,
+  totalHits,
+  hasMore,
+  moreBusy,
   onOpenHouse,
   onOpenHouseId,
   onCloseHouse,
   onAreaChange,
   onView,
   onToggleListenAll,
+  onLoadMore,
 }: {
   view: HuntView;
   listings: Listing[];
@@ -44,12 +49,16 @@ export function HuntBody({
   listenAll: boolean;
   reelFocus: string | null;
   playableVideos: SocialListing[];
+  totalHits: number;
+  hasMore: boolean;
+  moreBusy: boolean;
   onOpenHouse: (listing: Listing) => void;
   onOpenHouseId: (id: string) => void;
   onCloseHouse: () => void;
   onAreaChange: (next: { boxes: GeoBounds[]; districts: string[] }) => void;
   onView: (next: HuntView, focus?: string | null) => void;
   onToggleListenAll: () => void;
+  onLoadMore: () => void;
 }) {
   const wide = useMinWidth(HUNT_WIDE_PX);
 
@@ -126,6 +135,15 @@ export function HuntBody({
             />
           ))}
         </div>
+        {view !== "saved" ? (
+          <LoadMore
+            shown={listings.length}
+            total={totalHits}
+            hasMore={hasMore}
+            busy={moreBusy}
+            onMore={onLoadMore}
+          />
+        ) : null}
       </div>
       <div className="hunt-detail-pane">
         {openListing ? (

@@ -74,11 +74,23 @@ export function mergeSearchResults(
     ),
   ];
   const live = parts.some((part) => part.live) || extras.length > 0;
+  const catalogHits = parts.reduce((sum, part) => Math.max(sum, part.totalHits), 0);
   return {
-    totalHits: sorted.length,
+    totalHits: Math.max(sorted.length, catalogHits),
     listings: sorted,
     live,
     source: sources.length ? sources.join(" · ") : "Ingen kilder",
     sources,
+  };
+}
+
+export function appendSearchPage(current: SearchResult, extra: SearchResult): SearchResult {
+  const listings = dedupeListings([...current.listings, ...extra.listings]);
+  return {
+    ...current,
+    listings,
+    totalHits: Math.max(current.totalHits, extra.totalHits, listings.length),
+    live: current.live || extra.live,
+    sources: [...new Set([...current.sources, ...extra.sources])],
   };
 }

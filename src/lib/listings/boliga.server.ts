@@ -127,6 +127,9 @@ function mapBoliga(raw: unknown): Listing | null {
 }
 
 export async function searchBoliga(filters: SearchFilters): Promise<SearchResult> {
+  if (filters.page > 1) {
+    return { totalHits: 0, listings: [], live: false, source: "Boliga", sources: [] };
+  }
   const kommune = kommuneBySlug(filters.municipality);
   if (!kommune) {
     return { totalHits: 0, listings: [], live: false, source: "Boliga", sources: [] };
