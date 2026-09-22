@@ -251,5 +251,6 @@ export async function getBoligsidenCase(id: string): Promise<ListingDetail | nul
     bathrooms: null,
     floors: null,
     images: snap.image ? [snap.image] : [],
+    priceHistory: [],
   };
 }

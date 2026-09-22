@@ -222,6 +222,7 @@ export type ListingDetail = Listing & {
   bathrooms: number | null;
   floors: number | null;
   images: string[];
+  priceHistory?: Array<{ at: string; price: number }>;
 };
 
 export type SearchResult = {

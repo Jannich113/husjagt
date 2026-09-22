@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EnergyBadge } from "@/components/listings/energy-badge";
 import { HighlightText } from "@/components/listings/highlight-text";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
+import { PriceHistory } from "@/components/listings/price-history";
 import { SavedNote } from "@/components/listings/saved-note";
 import { ListingPhoto } from "@/components/listings/listing-photo";
 import { ShareButton } from "@/components/listings/share-button";
@@ -56,22 +57,25 @@ export function HouseDetail({
   const href = listing.caseUrl || boligsidenUrl(listing.slugAddress || listing.slug);
   const seed = useMemo(() => listingPhotos(listing), [listing]);
   const [photos, setPhotos] = useState(seed);
+  const [history, setHistory] = useState(listing.priceHistory ?? []);
   const keywordWords = useKeywords((s) => s.words);
   const keywordHits = moduleOn("keywords") ? matchedKeywords(listing, keywordWords) : [];
 
   useEffect(() => {
     setPhotos(seed);
-  }, [seed]);
+    setHistory(listing.priceHistory ?? []);
+  }, [seed, listing.id, listing.priceHistory]);
 
   useEffect(() => {
-    if (!moduleOn("photoGallery")) return;
-    if ((listing.images?.length ?? 0) >= 2) return;
+    if (!moduleOn("photoGallery") && !moduleOn("priceHistory")) return;
+    if ((listing.images?.length ?? 0) >= 2 && (listing.priceHistory?.length ?? 0) >= 2) return;
     let alive = true;
     void getListing({ data: { id: listing.id } })
       .then((detail) => {
         if (!alive || !detail) return;
         const next = listingPhotos(detail);
         if (next.length) setPhotos(next);
+        if (detail.priceHistory?.length) setHistory(detail.priceHistory);
       })
       .catch(() => {
         /* cover stays */
@@ -79,7 +83,7 @@ export function HouseDetail({
     return () => {
       alive = false;
     };
-  }, [listing.id, listing.images?.length]);
+  }, [listing.id, listing.images?.length, listing.priceHistory?.length]);
 
   return (
     <>
@@ -212,6 +216,8 @@ export function HouseDetail({
         ) : null}
 
         <SavedNote id={listing.id} saved={saved} />
+
+        {moduleOn("priceHistory") ? <PriceHistory change={listing.priceChange} points={history} /> : null}
 
         <section className="mt-8 rounded-xl border border-border bg-surface p-4">
           <p className="text-xs uppercase tracking-wider text-muted">Mægler</p>
