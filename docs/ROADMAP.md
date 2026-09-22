@@ -44,4 +44,5 @@ Do **not** require the APK. Wrapper lives under `android/` — see [`android/REA
 | ID | Story | Notes |
 | --- | --- | --- |
 | S16 | Saved search alerts | Local badge on reopen (#17). Web Push is v2 only — see [web-push.md](web-push.md) |
+| ACC | Accounts + vault | Plan: [accounts.md](accounts.md). Start with export/import; no Grok-broker login |
 | S22+ | Street search, zones, keywords, … | Open issues on the board |
