@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GeoBounds, Listing } from "@/lib/listings/types";
-import type { KommuneView } from "@/lib/listings/kommune-view";
+import { huntMapCamera, unionGeoBounds, type KommuneView } from "@/lib/listings/kommune-view";
 import { formatKr } from "@/lib/listings/format";
 import { useFavorites } from "@/lib/listings/favorites";
 import { listingFreshness, useFirstSeen, type Freshness } from "@/lib/listings/fresh";
@@ -91,6 +91,7 @@ export function ListingMap({
   const layerRef = useRef<L.LayerGroup | null>(null);
   const areaRef = useRef<L.LayerGroup | null>(null);
   const fittedKey = useRef("");
+  const [mapReady, setMapReady] = useState(0);
   const onSelectRef = useRef(onSelect);
   const areaChangeRef = useRef(onAreaChange);
   const boxesRef = useRef(boxes);
@@ -126,6 +127,7 @@ export function ListingMap({
     layerRef.current = L.layerGroup().addTo(map);
     areaRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    setMapReady((n) => n + 1);
     const invalidate = () => map.invalidateSize();
     const ro = new ResizeObserver(invalidate);
     ro.observe(host.current);
@@ -144,7 +146,7 @@ export function ListingMap({
     const group = layerRef.current;
     if (!map || !group) return;
     group.clearLayers();
-    const pinBounds: L.LatLngTuple[] = [];
+    const pins: Array<{ lat: number; lon: number }> = [];
     for (const listing of listings) {
       if (listing.lat == null || listing.lon == null) continue;
       const kind = pinKind(listing.id, likedSet, seenSet);
@@ -157,28 +159,30 @@ export function ListingMap({
       marker.bindTooltip(`${listing.street} · ${formatKr(listing.price)}`, { direction: "top" });
       marker.on("click", () => onSelectRef.current(listing.id));
       marker.addTo(group);
-      pinBounds.push([listing.lat, listing.lon]);
+      pins.push({ lat: listing.lat, lon: listing.lon });
     }
-    const areaKey = `${kommune}|${listingKey}|${boxes.map((b) => `${b.minLon}`).join()}|${districts.join(",")}|${focus?.lat ?? ""}`;
-    if (fittedKey.current !== areaKey && !drawMode) {
+    const areaKey = `${kommune}|${listingKey}|${boxes.map((b) => `${b.minLon}`).join()}|${districts.join(",")}|${focus?.lat ?? ""}|${mapReady}`;
+    if (fittedKey.current !== areaKey && !drawMode && mapReady) {
       fittedKey.current = areaKey;
-      const fit: L.LatLngBounds[] = [];
-      for (const box of boxes) fit.push(leafletBox(box));
-      for (const id of districts) {
-        const row = named.find((d) => d.id === id);
-        if (row) fit.push(leafletBox(row.bounds));
+      const selectedDistrictBounds = districts
+        .map((id) => named.find((row) => row.id === id)?.bounds)
+        .filter((row): row is NonNullable<typeof row> => Boolean(row));
+      const camera = huntMapCamera({
+        boxes,
+        selectedDistrictBounds,
+        kommuneBounds: focus?.bounds ?? unionGeoBounds(named.map((row) => row.bounds)),
+        kommuneCenter: focus ? { lat: focus.lat, lon: focus.lon } : null,
+        pins,
+      });
+      map.invalidateSize();
+      if (camera?.kind === "bounds") {
+        map.fitBounds(leafletBox(camera.bounds).pad(0.08), { padding: [28, 28], maxZoom: camera.maxZoom });
+      } else if (camera?.kind === "point") {
+        map.setView([camera.lat, camera.lon], camera.zoom);
       }
-      if (fit.length) {
-        const union = L.latLngBounds(fit[0]!.getSouthWest(), fit[0]!.getNorthEast());
-        for (const b of fit.slice(1)) union.extend(b);
-        map.fitBounds(union.pad(0.12), { padding: [28, 28], maxZoom: 14 });
-      } else if (pinBounds.length > 1) map.fitBounds(pinBounds, { padding: [28, 28], maxZoom: 14 });
-      else if (pinBounds.length === 1) map.setView(pinBounds[0], 14);
-      else if (focus?.bounds) map.fitBounds(leafletBox(focus.bounds).pad(0.04), { padding: [28, 28], maxZoom: 12 });
-      else if (focus) map.setView([focus.lat, focus.lon], 11);
     }
     requestAnimationFrame(() => map.invalidateSize());
-  }, [listings, listingKey, seenSet, likedSet, firstSeen, boxes, districts, named, drawMode, kommune, focus]);
+  }, [listings, listingKey, seenSet, likedSet, firstSeen, boxes, districts, named, drawMode, kommune, focus, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
