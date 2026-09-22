@@ -40,6 +40,7 @@ import type { Listing, SearchFilters, SearchResult } from "@/lib/listings/types"
 import type { KommuneView } from "@/lib/listings/kommune-view";
 import { HuntBody } from "./hunt-body";
 import { HuntHeader } from "./hunt-header";
+import { HuntSync } from "@/components/account/hunt-sync";
 
 const VIEW_KEY = "husjagt:view";
 
@@ -331,6 +332,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
 
   return (
     <div className="hunt-shell">
+      <HuntSync />
       <HuntHeader
         view={view}
         filters={filters}

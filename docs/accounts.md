@@ -1,6 +1,6 @@
 # Accounts, tokens, and per-user data
 
-**Status:** plan. Do not turn on Better Auth / Grok broker on the current `*.grok.me` origin.
+**Status:** email/password accounts are ON. Hunt is gated behind a created konto. Class B blob syncs to `hunt_blob` per `user_id`.
 
 This is the next product slice after the hunt backlog. It unblocks sync and, later, [#29 seller chat](https://github.com/Jannich113/husjagt/issues/29). It does **not** replace [#45](https://github.com/Jannich113/husjagt/issues/45) self-host.
 

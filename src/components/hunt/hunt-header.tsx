@@ -1,4 +1,5 @@
 import { Heart, LayoutGrid, Map as MapIcon, Radio, ChevronDown, MapPin } from "lucide-react";
+import { UserButton } from "@/lib/auth/gates";
 import { useState } from "react";
 import { FilterSheet } from "@/components/listings/filter-sheet";
 import { PlacePicker } from "@/components/listings/place-picker";
@@ -88,6 +89,7 @@ export function HuntHeader({
             className="h-9 flex-none px-3.5 text-sm"
           />
           <ConnectionsSheet />
+          <UserButton />
           {view !== "listen" ? <SortMenu value={filters} onChange={onApply} /> : null}
           <FilterSheet
             value={filters}

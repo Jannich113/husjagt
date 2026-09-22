@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequireAccount } from "@/components/account/login-form";
 import { HuntApp } from "@/components/hunt";
 import { searchHousesFast } from "@/lib/listings/search";
 import {
@@ -32,5 +33,9 @@ export const Route = createFileRoute("/")({
 function Home() {
   const hunt = Route.useSearch() ?? {};
   const initial = Route.useLoaderData();
-  return <HuntApp hunt={hunt} initial={initial} />;
+  return (
+    <RequireAccount>
+      <HuntApp hunt={hunt} initial={initial} />
+    </RequireAccount>
+  );
 }
