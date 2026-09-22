@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HouseCard } from "@/components/listings/house-card";
 import { HouseDetail } from "@/components/listings/house-detail";
 import { VideoRail } from "@/components/listings/reel-feed";
@@ -74,18 +74,45 @@ export function HuntBody({
   const wide = useMinWidth(HUNT_WIDE_PX);
   const waiting = busy && listings.length < 4 && view !== "saved";
   const stamp = listings[0]?.id ?? "";
-  const [painted, setPainted] = useState(12);
+  const listPane = useRef<HTMLDivElement>(null);
+  const [painted, setPainted] = useState(8);
+  const paintedRef = useRef(painted);
+  const loadedRef = useRef(listings.length);
+  paintedRef.current = painted;
+  loadedRef.current = listings.length;
   useEffect(() => {
-    setPainted(12);
+    setPainted(8);
   }, [stamp]);
   useEffect(() => {
     if (painted >= listings.length) return;
+    const el = listPane.current;
+    if (el && el.scrollHeight > el.clientHeight + 48) return;
     const timer = window.setTimeout(() => {
-      setPainted((count) => Math.min(listings.length, count + 16));
-    }, 350);
+      setPainted((count) => Math.min(listings.length, count + 8));
+    }, 60);
     return () => window.clearTimeout(timer);
   }, [painted, listings.length]);
+  useEffect(() => {
+    const el = listPane.current;
+    if (!el || (view !== "list" && view !== "saved")) return;
+    const onScroll = () => {
+      if (el.scrollTop + el.clientHeight < el.scrollHeight - 240) return;
+      if (paintedRef.current < loadedRef.current) {
+        setPainted((count) => Math.min(loadedRef.current, count + 8));
+        return;
+      }
+      if (hasMore && !moreBusy) onLoadMore();
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [view, hasMore, moreBusy, onLoadMore, stamp]);
   const rows = view === "list" || view === "saved" ? listings.slice(0, painted) : listings;
+  useEffect(() => {
+    if (view !== "list" || painted < listings.length || !hasMore || moreBusy) return;
+    const el = listPane.current;
+    if (!el || el.scrollHeight > el.clientHeight + 48) return;
+    onLoadMore();
+  }, [view, painted, listings.length, hasMore, moreBusy, onLoadMore]);
 
   if (view === "listen") {
     if (busy && !listenView.listings.length) return <ListenSkeleton />;
@@ -150,14 +177,8 @@ export function HuntBody({
   return (
     <div className={cn("hunt-split", openListing && "is-open")} onWheel={forwardWheelToList}>
       <div
+        ref={listPane}
         className="hunt-list-pane p-3"
-        onScroll={(event) => {
-          const el = event.currentTarget;
-          if (painted >= listings.length) return;
-          if (el.scrollTop + el.clientHeight > el.scrollHeight - 320) {
-            setPainted((count) => Math.min(listings.length, count + 16));
-          }
-        }}
       >
         {view === "list" && playableVideos.length ? (
           <VideoRail

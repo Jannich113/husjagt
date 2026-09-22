@@ -121,7 +121,7 @@ export const DEFAULT_FILTERS: SearchFilters = {
   sortBy: "price",
   sortAscending: true,
   page: 1,
-  perPage: 50,
+  perPage: 12,
   boxes: [],
   districts: [],
 };

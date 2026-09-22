@@ -175,10 +175,11 @@ export function snapshotSearch(filters: SearchFilters): SearchResult {
       sources: [],
     };
   }
-  const listings = applyLocalFilters(snapshotListings(), filters);
+  const all = applyLocalFilters(snapshotListings(), filters);
+  const start = (filters.page - 1) * filters.perPage;
   return {
-    totalHits: listings.length,
-    listings,
+    totalHits: all.length,
+    listings: all.slice(start, start + filters.perPage),
     live: false,
     source: "Gemt Odense-udsnit",
     sources: ["Boligsiden"],
@@ -212,7 +213,7 @@ export async function searchBoligsiden(filters: SearchFilters): Promise<SearchRe
     balcony: false,
     terrace: false,
     elevator: false,
-  });
+  }).slice(0, filters.perPage);
 
   if (listings.length > 0 || catalogTotal(rec, 0) > 0) {
     const apiHits = catalogTotal(rec, listings.length);
@@ -226,9 +227,10 @@ export async function searchBoligsiden(filters: SearchFilters): Promise<SearchRe
   }
 
   const fallback = filters.municipality === "odense" ? applyLocalFilters(snapshotListings(), filters) : [];
+  const start = (filters.page - 1) * filters.perPage;
   return {
     totalHits: fallback.length,
-    listings: fallback,
+    listings: fallback.slice(start, start + filters.perPage),
     live: false,
     source:
       filters.municipality === "odense"

@@ -43,7 +43,6 @@ import { HuntHeader } from "./hunt-header";
 import { HuntSync } from "@/components/account/hunt-sync";
 
 const VIEW_KEY = "husjagt:view";
-const FIRST_PAINT = 12;
 
 function storedView(fallback: HuntView): HuntView {
   if (typeof window === "undefined") return fallback;
@@ -79,7 +78,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   const [placeView, setPlaceView] = useState<KommuneView | null>(null);
   const [reelFocus, setReelFocus] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
-  const [listLimit, setListLimit] = useState(FIRST_PAINT);
   const savedIds = useFavorites((s) => s.ids);
   const savedMap = useFavorites((s) => s.items);
   const hydrate = useFavorites((s) => s.hydrate);
@@ -116,21 +114,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     document.body.style.removeProperty("pointer-events");
     document.body.style.removeProperty("overflow");
   }, [hydrate, hydrateSeen, hydrateHidden, hydrateFirstSeen, hydrateWatch, hydrateKeywords, hydrateAlerts]);
-
-  useEffect(() => {
-    let cancel = false;
-    const reveal = () => {
-      if (cancel) return;
-      startTransition(() => setListLimit(Number.POSITIVE_INFINITY));
-    };
-    const idle = window.requestIdleCallback?.(reveal, { timeout: 700 });
-    const backup = window.setTimeout(reveal, 700);
-    return () => {
-      cancel = true;
-      if (idle != null) window.cancelIdleCallback(idle);
-      window.clearTimeout(backup);
-    };
-  }, []);
 
   useEffect(() => {
     if (!moduleOn("searchAlerts")) return;
@@ -257,6 +240,12 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
   }
 
   useEffect(() => {
+    if (view !== "map" || !hasMore || moreBusy || busy) return;
+    const timer = window.setTimeout(() => loadMore(), 500);
+    return () => window.clearTimeout(timer);
+  }, [view, hasMore, moreBusy, busy, page]);
+
+  useEffect(() => {
     if (!watchReady || view !== "listen") return;
     let alive = true;
     setSocialReady(false);
@@ -372,8 +361,6 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
     }
   }
 
-  const painted = view === "list" && listings.length > listLimit ? listings.slice(0, listLimit) : listings;
-
   return (
     <div className="hunt-shell">
       <HuntSync />
@@ -414,7 +401,7 @@ export function HuntApp({ hunt, initial }: { hunt: HuntSearch; initial: SearchRe
       <div className="hunt-body">
         <HuntBody
           view={view}
-          listings={painted}
+          listings={listings}
           openListing={openListing}
           filters={filters}
           catalog={areaDistricts}
