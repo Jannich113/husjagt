@@ -594,34 +594,45 @@
   pointer-events: none;
 }
 
-.hunt-skel,
 .hunt-skel-photo,
 .hunt-skel-line,
 .hunt-skel-dot,
-.hunt-skel-block,
+.hunt-skel-block {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-sunken);
+  background-image: linear-gradient(
+    100deg,
+    var(--color-sunken) 0%,
+    var(--color-sunken) 36%,
+    #fff 50%,
+    var(--color-sunken) 64%,
+    var(--color-sunken) 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: huntShimmer 1.2s ease-in-out infinite;
+  animation-delay: var(--skel-delay, 0s);
+}
+
+.hunt-skel-row:nth-child(2) { --skel-delay: 0.1s; }
+.hunt-skel-row:nth-child(3) { --skel-delay: 0.2s; }
+.hunt-skel-row:nth-child(4) { --skel-delay: 0.3s; }
+.hunt-skel-row:nth-child(5) { --skel-delay: 0.4s; }
+.hunt-skel-row:nth-child(6) { --skel-delay: 0.5s; }
+
 .hunt-skel-map {
   position: relative;
   overflow: hidden;
-  background: var(--color-sunken);
 }
 
-.hunt-skel::after,
-.hunt-skel-photo::after,
-.hunt-skel-line::after,
-.hunt-skel-dot::after,
-.hunt-skel-block::after,
 .hunt-skel-map::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in oklab, var(--color-surface) 80%, white) 50%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  animation: huntSkel 1.15s ease-in-out infinite;
+  background: linear-gradient(100deg, transparent 36%, rgb(255 255 255 / 0.72) 50%, transparent 64%);
+  background-size: 220% 100%;
+  animation: huntShimmer 1.5s ease-in-out infinite;
 }
 
 .hunt-skel-row {
@@ -683,19 +694,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hunt-skel::after,
-  .hunt-skel-photo::after,
-  .hunt-skel-line::after,
-  .hunt-skel-dot::after,
-  .hunt-skel-block::after,
+  .hunt-skel-photo,
+  .hunt-skel-line,
+  .hunt-skel-dot,
+  .hunt-skel-block,
   .hunt-skel-map::after {
     animation: none;
   }
 }
 
-@keyframes huntSkel {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+@keyframes huntShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 .reel-ken {
