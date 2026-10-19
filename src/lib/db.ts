@@ -221,11 +221,7 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
  */
 export function ensureDbReady(): Promise<void> {
   if (dbSource !== "pglite") return Promise.resolve();
-  return getSql()
-    .then(async () => {
-      const { seedDevTestAccount } = await import("./account/dev-test-user.server");
-      await seedDevTestAccount();
-    });
+  return getSql().then(() => undefined);
 }
 
 // Server-only eager start: kick PGLite bootstrap as soon as this module loads in

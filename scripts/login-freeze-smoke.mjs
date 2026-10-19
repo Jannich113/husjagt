@@ -3,6 +3,7 @@
  * Fast login/hunt freeze check. No fixed soaks — waits for DOM, then
  * samples frames. Screenshots only on failure.
  */
+import { randomBytes } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
 
@@ -81,16 +82,25 @@ async function run() {
 
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: /Opret konto|Log ind/ }).waitFor();
-  const fill = page.getByRole("button", { name: /Brug test-konto/ });
-  if (await fill.count()) await fill.click();
-  else {
+  // No shared dummy account (#49). Use SMOKE_EMAIL / SMOKE_PASSWORD for an
+  // existing account, otherwise sign up a throwaway one with a random password.
+  const smokeEmail = process.env.SMOKE_EMAIL;
+  const smokePassword = process.env.SMOKE_PASSWORD;
+  let submitLabel = "Log ind";
+  if (smokeEmail && smokePassword) {
     await page.getByRole("button", { name: /allerede en konto/ }).click();
-    await page.locator('input[type="email"]').fill("test@test.com");
-    await page.locator('input[type="password"]').fill("test");
+    await page.locator('input[type="email"]').fill(smokeEmail);
+    await page.locator('input[type="password"]').fill(smokePassword);
+  } else {
+    const id = `${Date.now()}-${randomBytes(4).toString("hex")}`;
+    submitLabel = "Opret konto";
+    await page.getByLabel("Navn").fill("Smoke");
+    await page.locator('input[type="email"]').fill(`smoke-${id}@example.invalid`);
+    await page.locator('input[type="password"]').fill(randomBytes(16).toString("base64url"));
   }
   const navBefore = navs;
   const loginStart = Date.now();
-  await page.getByRole("button", { name: "Log ind", exact: true }).click();
+  await page.getByRole("button", { name: submitLabel, exact: true }).click();
   await page.getByRole("button", { name: "Sign out" }).waitFor();
   const loginMs = Date.now() - loginStart;
   console.log(`login ${loginMs}ms navs=${navs - navBefore}`);
