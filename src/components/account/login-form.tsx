@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { KONTO_COPY, type KontoNeed } from "@/lib/account/gate";
-import { DEV_TEST_LOGIN } from "@/lib/account/dev-test-user";
 import { persistSessionBearer, sessionTokenFromAuthData } from "@/lib/account/session-bearer";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -94,27 +93,12 @@ export function LoginForm({ need }: { need?: KontoNeed }) {
             onChange={(event) => setPassword(event.target.value)}
             type="password"
             required
-            minLength={mode === "signup" ? 8 : 1}
+            minLength={8}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
             className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm"
           />
         </Field>
         {error ? <p className="text-sm text-danger">{error}</p> : null}
-        {import.meta.env.DEV ? (
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signin");
-              setName(DEV_TEST_LOGIN.name);
-              setEmail(DEV_TEST_LOGIN.email);
-              setPassword(DEV_TEST_LOGIN.password);
-              setError(null);
-            }}
-            className="h-11 w-full rounded-full border border-dashed border-border text-sm text-muted"
-          >
-            Brug test-konto ({DEV_TEST_LOGIN.email})
-          </button>
-        ) : null}
         <button
           type="submit"
           disabled={busy}
